@@ -342,6 +342,7 @@ type ClineMessage = {
 				| "checkpoint_saved"
 				| "rooignore_error"
 				| "diff_error"
+				| "robot_arm_state"
 		  )
 		| undefined
 	text?: string | undefined
@@ -427,6 +428,7 @@ type RooCodeEvents = {
 							| "checkpoint_saved"
 							| "rooignore_error"
 							| "diff_error"
+							| "robot_arm_state"
 					  )
 					| undefined
 				text?: string | undefined
@@ -504,6 +506,7 @@ type RooCodeEvents = {
 			| "switch_mode"
 			| "new_task"
 			| "fetch_instructions"
+			| "robot_arm_state"
 		),
 		string,
 	]

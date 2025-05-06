@@ -75,6 +75,7 @@ import { askFollowupQuestionTool } from "./tools/askFollowupQuestionTool"
 import { switchModeTool } from "./tools/switchModeTool"
 import { attemptCompletionTool } from "./tools/attemptCompletionTool"
 import { newTaskTool } from "./tools/newTaskTool"
+import { getRobotStateTool } from "./tools/getRobotStateTool"
 
 // prompts
 import { formatResponse } from "./prompts/responses"
@@ -1254,6 +1255,8 @@ export class Cline extends EventEmitter<ClineEvents> {
 							const modeName = getModeBySlug(mode, customModes)?.name ?? mode
 							return `[${block.name} in ${modeName} mode: '${message}']`
 						}
+						case "robot_arm_state":
+							return `[${block.name}]`
 					}
 				}
 
@@ -1498,6 +1501,10 @@ export class Cline extends EventEmitter<ClineEvents> {
 							toolDescription,
 							askFinishSubTaskApproval,
 						)
+						break
+					case "robot_arm_state":
+						// TODO: Implement this
+						await getRobotStateTool(this, block, pushToolResult)
 						break
 				}
 

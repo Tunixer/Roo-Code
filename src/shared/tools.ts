@@ -181,6 +181,7 @@ export const TOOL_DISPLAY_NAMES: Record<ToolName, string> = {
 	new_task: "create new task",
 	insert_content: "insert content",
 	search_and_replace: "search and replace",
+	robot_arm_state: "show robot arm state",
 } as const
 
 export type { ToolGroup }
@@ -214,6 +215,7 @@ export const ALWAYS_AVAILABLE_TOOLS: ToolName[] = [
 	"attempt_completion",
 	"switch_mode",
 	"new_task",
+	"robot_arm_state",
 ] as const
 
 export type DiffResult =

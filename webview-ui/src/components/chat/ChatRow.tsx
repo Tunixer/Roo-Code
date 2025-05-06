@@ -24,6 +24,7 @@ import McpToolRow from "../mcp/McpToolRow"
 import { Mention } from "./Mention"
 import { CheckpointSaved } from "./checkpoints/CheckpointSaved"
 import { FollowUpSuggest } from "./FollowUpSuggest"
+import { CytoR6ArmState } from "./robot/arm_state"
 
 interface ChatRowProps {
 	message: ClineMessage
@@ -1004,6 +1005,8 @@ export const ChatRowContent = ({
 							checkpoint={message.checkpoint}
 						/>
 					)
+				case "robot_arm_state":
+					return <CytoR6ArmState />
 				default:
 					return (
 						<>

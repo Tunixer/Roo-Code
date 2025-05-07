@@ -1504,7 +1504,7 @@ export class Cline extends EventEmitter<ClineEvents> {
 						break
 					case "robot_arm_state":
 						// TODO: Implement this
-						await getRobotStateTool(this, block, pushToolResult)
+						await getRobotStateTool(this, block, pushToolResult, removeClosingTag, toolDescription)
 						break
 				}
 

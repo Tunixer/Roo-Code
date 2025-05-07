@@ -1,12 +1,12 @@
-import React, { useState } from "react"
+import React, { useState, useEffect, useCallback } from "react"
 import { useAppTranslation } from "@/i18n/TranslationContext"
 
 export const CytoR6ArmState: React.FC = () => {
 	const { t } = useAppTranslation()
 
-	const [jointPositions, _setJointPositions] = useState<number[]>([0, 0, 0, 0, 0, 0])
-	const [jointVelocities, _setJointVelocities] = useState<number[]>([0, 0, 0, 0, 0, 0])
-	const [endEffectorPose, _setEndEffectorPose] = useState<{
+	const [jointPositions, setJointPositions] = useState<number[]>([0, 0, 0, 0, 0, 0])
+	const [jointVelocities, setJointVelocities] = useState<number[]>([0, 0, 0, 0, 0, 0])
+	const [endEffectorPose, setEndEffectorPose] = useState<{
 		x: number
 		y: number
 		z: number
@@ -14,7 +14,7 @@ export const CytoR6ArmState: React.FC = () => {
 		pitch: number
 		yaw: number
 	}>({ x: 0, y: 0, z: 0, roll: 0, pitch: 0, yaw: 0 })
-	const [endEffectorVelocity, _setEndEffectorVelocity] = useState<{
+	const [endEffectorVelocity, setEndEffectorVelocity] = useState<{
 		vx: number
 		vy: number
 		vz: number
@@ -22,6 +22,39 @@ export const CytoR6ArmState: React.FC = () => {
 		wy: number
 		wz: number
 	}>({ vx: 0, vy: 0, vz: 0, wx: 0, wy: 0, wz: 0 })
+
+	const handleMessages = useCallback(
+		(event: MessageEvent) => {
+			const message = event.data
+			console.log("Received message in arm_state:", message)
+
+			if (message.type === "r6arm_state_update" && message.payload) {
+				const robotStateData = message.payload
+
+				if (robotStateData.jointPositions) {
+					setJointPositions(robotStateData.jointPositions)
+				}
+				if (robotStateData.jointVelocities) {
+					setJointVelocities(robotStateData.jointVelocities)
+				}
+				if (robotStateData.endEffectorPose) {
+					setEndEffectorPose(robotStateData.endEffectorPose)
+				}
+				if (robotStateData.endEffectorVelocity) {
+					setEndEffectorVelocity(robotStateData.endEffectorVelocity)
+				}
+			}
+		},
+		[setJointPositions, setJointVelocities, setEndEffectorPose, setEndEffectorVelocity],
+	)
+
+	useEffect(() => {
+		window.addEventListener("message", handleMessages)
+
+		return () => {
+			window.removeEventListener("message", handleMessages)
+		}
+	}, [handleMessages])
 
 	return (
 		<div className="flex flex-col px-4 py-2 mb-2 text-sm rounded bg-vscode-sideBar-background text-vscode-foreground">

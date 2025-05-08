@@ -4,8 +4,9 @@ import { useAppTranslation } from "@/i18n/TranslationContext"
 export const CytoR6ArmState: React.FC = () => {
 	const { t } = useAppTranslation()
 
-	const [jointPositions, setJointPositions] = useState<number[]>([0, 0, 0, 0, 0, 0])
-	const [jointVelocities, setJointVelocities] = useState<number[]>([0, 0, 0, 0, 0, 0])
+	const [jointPosition, setJointPosition] = useState<number[]>([0, 0, 0, 0, 0, 0])
+	const [jointVelocity, setJointVelocity] = useState<number[]>([0, 0, 0, 0, 0, 0])
+	const [jointTorques, setJointTorques] = useState<number[]>([0, 0, 0, 0, 0, 0])
 	const [endEffectorPose, setEndEffectorPose] = useState<{
 		x: number
 		y: number
@@ -31,21 +32,24 @@ export const CytoR6ArmState: React.FC = () => {
 			if (message.type === "r6arm_state_update" && message.payload) {
 				const robotStateData = message.payload
 
-				if (robotStateData.jointPositions) {
-					setJointPositions(robotStateData.jointPositions)
+				if (robotStateData.joint_position) {
+					setJointPosition(robotStateData.joint_position)
 				}
-				if (robotStateData.jointVelocities) {
-					setJointVelocities(robotStateData.jointVelocities)
+				if (robotStateData.joint_velocity) {
+					setJointVelocity(robotStateData.joint_velocity)
 				}
-				if (robotStateData.endEffectorPose) {
-					setEndEffectorPose(robotStateData.endEffectorPose)
+				if (robotStateData.joint_torques) {
+					setJointTorques(robotStateData.joint_torques)
 				}
-				if (robotStateData.endEffectorVelocity) {
-					setEndEffectorVelocity(robotStateData.endEffectorVelocity)
+				if (robotStateData.cartesian_pose) {
+					setEndEffectorPose(robotStateData.cartesian_pose)
+				}
+				if (robotStateData.cartesian_velocity) {
+					setEndEffectorVelocity(robotStateData.cartesian_velocity)
 				}
 			}
 		},
-		[setJointPositions, setJointVelocities, setEndEffectorPose, setEndEffectorVelocity],
+		[setJointPosition, setJointVelocity, setJointTorques, setEndEffectorPose, setEndEffectorVelocity],
 	)
 
 	useEffect(() => {
@@ -63,14 +67,19 @@ export const CytoR6ArmState: React.FC = () => {
 			<div className="mb-2">
 				<div className="font-semibold mb-1">{t("robot:armState.jointState")}</div>
 				<div className="grid grid-cols-2 gap-x-4 gap-y-1">
-					{jointPositions.map((pos, index) => (
+					{jointPosition.map((pos, index) => (
 						<div key={`jp-${index}`}>
 							{t("robot:armState.jointPosition", { number: index + 1 })}: {pos.toFixed(2)}
 						</div>
 					))}
-					{jointVelocities.map((vel, index) => (
+					{jointVelocity.map((vel, index) => (
 						<div key={`jv-${index}`}>
 							{t("robot:armState.jointVelocity", { number: index + 1 })}: {vel.toFixed(2)}
+						</div>
+					))}
+					{jointTorques.map((torque, index) => (
+						<div key={`jt-${index}`}>
+							{t("robot:armState.jointTorque", { number: index + 1 })}: {torque.toFixed(2)}
 						</div>
 					))}
 				</div>

@@ -4,6 +4,7 @@
 		"jointState": "关节状态",
 		"jointPosition": "关节 {{number}} 位置",
 		"jointVelocity": "关节 {{number}} 角速度",
+		"jointTorque": "关节 {{number}} 力矩",
 		"endEffectorState": "末端执行器状态",
 		"posePosition": "位姿 (位置)",
 		"poseOrientation": "位姿 (姿态)",

@@ -106,25 +106,54 @@ class RobotStateForwarder {
 	}
 	async run() {
 		this.subscriber.connect("tcp://localhost:5557")
-		this.subscriber.subscribe()
+		this.subscriber.subscribe("")
+
 		let count = 0
-		const MAX_MSG_COUNT = 1000
-		for await (const [msg] of this.subscriber) {
-			if (msg) {
-				const msg_data = ParseRobotStateData(msg)
-				this.cline.providerRef.deref()?.postMessageToWebview({
-					type: "r6arm_state_update",
-					payload: msg_data,
-				})
-				console.log("received a message:", msg_data)
-				count++
-				if (count > MAX_MSG_COUNT) {
+		const MAX_MSG_COUNT = 100
+		const MESSAGE_TIMEOUT_MS = 10000
+
+		const iterator = this.subscriber[Symbol.asyncIterator]()
+
+		while (count < MAX_MSG_COUNT) {
+			let timeoutId: NodeJS.Timeout | undefined
+			const timeoutPromise: Promise<never> = new Promise((_, reject) => {
+				timeoutId = setTimeout(() => {
+					reject(new Error(`Timeout after ${MESSAGE_TIMEOUT_MS}ms waiting for ZMQ message`))
+				}, MESSAGE_TIMEOUT_MS)
+			})
+
+			try {
+				const messagePromise = iterator.next()
+
+				const result = await Promise.race([messagePromise, timeoutPromise])
+
+				if (timeoutId) clearTimeout(timeoutId)
+
+				if (result.done) {
+					console.log("ZMQ subscriber closed.")
 					break
 				}
-			} else {
-				console.log("received a invalid message:", msg)
+
+				const msg = result.value[0]
+				if (msg) {
+					const msg_data = ParseRobotStateData(msg)
+					this.cline.providerRef.deref()?.postMessageToWebview({
+						type: "r6arm_state_update",
+						payload: msg_data,
+					})
+					console.log("BE: received and parsed ZMQ message:", msg_data)
+					count++
+				} else {
+					console.log("BE: received an empty or invalid message part:", msg)
+				}
+			} catch (error: any) {
+				if (timeoutId) clearTimeout(timeoutId)
+				console.error(`BE: Error receiving ZMQ message: ${error.message}`)
+				break
 			}
 		}
+
+		console.log(`BE: ZMQ subscriber loop finished after receiving ${count} messages.`)
 	}
 }
 
@@ -139,7 +168,7 @@ export async function getRobotStateTool(
 		return
 	}
 	const result_text = "The robot arm state is shown above."
-	await cline.say("robot_arm_state", result_text)
+	await cline.say("robot_arm_state", result_text, undefined, true)
 	// await cline.say("completion_result", result_text, undefined, false)
 	// await cline.ask("completion_result", "", false)
 	const forwarder = new RobotStateForwarder(cline)

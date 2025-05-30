@@ -1,0 +1,14 @@
+{
+	"armState": {
+		"title": "Arm State",
+		"jointState": "Joint State",
+		"jointPosition": "Joint {{number}} Position",
+		"jointVelocity": "Joint {{number}} Velocity",
+		"jointTorque": "Joint {{number}} Torque",
+		"endEffectorState": "End Effector State",
+		"posePosition": "Pose (Position)",
+		"poseOrientation": "Pose (Orientation)",
+		"velocityLinear": "Velocity (Linear)",
+		"velocityAngular": "Velocity (Angular)"
+	}
+}

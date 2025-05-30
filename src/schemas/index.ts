@@ -651,7 +651,7 @@ const globalSettingsRecord: GlobalSettingsRecord = {
 	customSupportPrompts: undefined,
 	enhancementApiConfigId: undefined,
 	cachedChromeHostUrl: undefined,
-	historyPreviewCollapsed: undefined, 
+	historyPreviewCollapsed: undefined,
 }
 
 export const GLOBAL_SETTINGS_KEYS = Object.keys(globalSettingsRecord) as Keys<GlobalSettings>[]
@@ -775,6 +775,7 @@ export const clineSays = [
 	"checkpoint_saved",
 	"rooignore_error",
 	"diff_error",
+	"robot_arm_state",
 ] as const
 
 export const clineSaySchema = z.enum(clineSays)
@@ -845,6 +846,7 @@ export const toolNames = [
 	"switch_mode",
 	"new_task",
 	"fetch_instructions",
+	"robot_arm_state",
 ] as const
 
 export const toolNamesSchema = z.enum(toolNames)

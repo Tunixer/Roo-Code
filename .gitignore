@@ -43,3 +43,5 @@ logs
 .idea/
 .qodo/
 .vercel
+#VS Code Counter
+.VSCodeCounter/

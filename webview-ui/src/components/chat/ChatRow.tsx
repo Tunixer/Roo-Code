@@ -38,6 +38,7 @@ import { CommandExecutionError } from "./CommandExecutionError"
 import { AutoApprovedRequestLimitWarning } from "./AutoApprovedRequestLimitWarning"
 import { CondenseContextErrorRow, CondensingContextRow, ContextCondenseRow } from "./ContextCondenseRow"
 import CodebaseSearchResultsDisplay from "./CodebaseSearchResultsDisplay"
+import { CytoR6ArmState } from "./robot/arm_state"
 
 interface ChatRowProps {
 	message: ClineMessage
@@ -1033,6 +1034,8 @@ export const ChatRowContent = ({
 					const { query = "", results = [] } = parsed?.content || {}
 
 					return <CodebaseSearchResultsDisplay query={query} results={results} />
+				case "robot_arm_state":
+					return <CytoR6ArmState />
 				default:
 					return (
 						<>

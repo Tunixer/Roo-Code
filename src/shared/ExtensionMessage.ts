@@ -73,6 +73,7 @@ export interface ExtensionMessage {
 		| "indexingStatusUpdate"
 		| "indexCleared"
 		| "codebaseIndexConfig"
+		| "r6arm_state_update"
 	text?: string
 	action?:
 		| "chatButtonClicked"
@@ -114,6 +115,7 @@ export interface ExtensionMessage {
 	value?: any
 	userInfo?: CloudUserInfo
 	organizationAllowList?: OrganizationAllowList
+	payload?: any
 }
 
 export type ExtensionState = Pick<

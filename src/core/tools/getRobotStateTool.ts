@@ -109,7 +109,7 @@ class RobotStateForwarder {
 		this.subscriber.subscribe("")
 
 		let count = 0
-		const MAX_MSG_COUNT = 100
+		const MAX_MSG_COUNT = 1000
 		const MESSAGE_TIMEOUT_MS = 10000
 
 		const iterator = this.subscriber[Symbol.asyncIterator]()

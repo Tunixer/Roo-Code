@@ -2,6 +2,8 @@ import { EventEmitter } from "events"
 import { RobotArmState } from "./types"
 import { ToolResponse } from "../../shared/tools"
 import { formatResponse } from "../prompts/responses"
+import { Subscriber as ZMQSubscriber, Request as ZMQRequest, Dealer as ZMQDealer } from "zeromq"
+import { ParseRobotStateData } from "./message/ArmState"
 
 export interface ArmStateSubscriberEvents {
 	stateUpdate: [state: RobotArmState]
@@ -15,6 +17,8 @@ export interface ConnectionConfig {
 	ipAddress: string
 	port: number
 	topic?: string
+	messageTimeout?: number // 消息接收超时时间（毫秒），默认10秒
+	maxConsecutiveTimeouts?: number // 最大连续超时次数，默认3次
 }
 
 export interface RobotArmControllerParams {
@@ -30,18 +34,25 @@ export class ArmStateSubscriber extends EventEmitter<ArmStateSubscriberEvents> {
 	private readonly reconnectInterval = 5000 // 5 seconds
 	private currentConfig?: ConnectionConfig
 	private provider: any // ClineProvider instance
-
+	private zmq_server: ZMQRequest
+	private zmq_dealer: ZMQDealer
+	private zmq_subscriber: ZMQSubscriber
 	constructor(
 		provider?: any,
 		private readonly defaultConfig: ConnectionConfig = {
 			ipAddress: "localhost",
 			port: 5555,
 			topic: "arm_state",
+			messageTimeout: 10000, // 10秒
+			maxConsecutiveTimeouts: 3, // 最大3次连续超时
 		},
 	) {
 		super()
 		this.currentConfig = { ...defaultConfig }
 		this.provider = provider
+		this.zmq_server = new ZMQRequest()
+		this.zmq_dealer = new ZMQDealer()
+		this.zmq_subscriber = new ZMQSubscriber()
 
 		if (provider) {
 			this.setupEventListeners()
@@ -77,6 +88,48 @@ export class ArmStateSubscriber extends EventEmitter<ArmStateSubscriberEvents> {
 		})
 	}
 
+	async make_connection(): Promise<boolean> {
+		try {
+			const server_endpoint = `tcp://${this.currentConfig!.ipAddress}:${this.currentConfig!.port}`
+
+			// 1. 连接到服务器获取端口信息
+			console.log(`[ArmStateSubscriber] Connecting to server at ${server_endpoint}`)
+			this.zmq_server.connect(server_endpoint)
+
+			// 2. 发送获取信息请求
+			await this.zmq_server.send("get_info")
+
+			// 3. 接收服务器返回的端口信息
+			const [response] = await this.zmq_server.receive()
+			const net_infos = JSON.parse(response.toString())
+
+			if (!net_infos || !net_infos.dealer_port || !net_infos.sub_port) {
+				throw new Error("Invalid network info received from server")
+			}
+
+			const dealer_endpoint = `tcp://${this.currentConfig!.ipAddress}:${net_infos.dealer_port}`
+			const sub_endpoint = `tcp://${this.currentConfig!.ipAddress}:${net_infos.sub_port}`
+
+			console.log(`[ArmStateSubscriber] dealer_info: ${this.currentConfig!.ipAddress}:${net_infos.dealer_port}`)
+			console.log(`[ArmStateSubscriber] sub_info: ${this.currentConfig!.ipAddress}:${net_infos.sub_port}`)
+
+			// 4. 连接到DEALER socket (用于发送命令)
+			this.zmq_dealer.connect(dealer_endpoint)
+			console.log(`[ArmStateSubscriber] Connected to dealer at ${dealer_endpoint}`)
+
+			// 5. 连接到SUB socket (用于订阅状态)
+			this.zmq_subscriber.connect(sub_endpoint)
+			// 订阅所有消息 (空字符串表示订阅所有)
+			this.zmq_subscriber.subscribe(this.currentConfig!.topic || "")
+			console.log(`[ArmStateSubscriber] Connected to subscriber at ${sub_endpoint}`)
+
+			return true
+		} catch (error) {
+			console.error("[ArmStateSubscriber] Connection failed:", error)
+			return false
+		}
+	}
+
 	async connect(config?: Partial<ConnectionConfig>): Promise<void> {
 		if (this.isConnecting || this.isConnected) {
 			console.log("[ArmStateSubscriber] Already connecting or connected")
@@ -88,26 +141,18 @@ export class ArmStateSubscriber extends EventEmitter<ArmStateSubscriberEvents> {
 			this.currentConfig = { ...this.currentConfig!, ...config }
 		}
 
-		const endpoint = `tcp://${this.currentConfig!.ipAddress}:${this.currentConfig!.port}`
-
 		try {
-			console.log(`[ArmStateSubscriber] Connecting to ${endpoint} for topic ${this.currentConfig!.topic}`)
+			console.log(
+				`[ArmStateSubscriber] Connecting to robot arm at ${this.currentConfig!.ipAddress}:${this.currentConfig!.port}`,
+			)
 
 			this.isConnecting = true
 			this.emit("connectionStatusChanged", "connecting")
 
-			// TODO: 实际的 libzmq 连接逻辑
-			// 这里需要根据你的具体 libzmq 库来实现
-			// 例如使用 zeromq 或其他 ZMQ 库
-
-			// 模拟连接延迟
-			await new Promise((resolve) => setTimeout(resolve, 1000))
-
-			// 模拟连接成功/失败
-			const shouldSucceed = Math.random() > 0.2 // 80% 成功率
-
-			if (!shouldSucceed) {
-				throw new Error("Connection timeout or refused")
+			// 使用新的连接方法
+			const connected = await this.make_connection()
+			if (!connected) {
+				throw new Error("Failed to establish ZMQ connections")
 			}
 
 			this.isConnected = true
@@ -115,10 +160,12 @@ export class ArmStateSubscriber extends EventEmitter<ArmStateSubscriberEvents> {
 			this.emit("connected")
 			this.emit("connectionStatusChanged", "connected")
 
-			// 启动模拟数据发送（实际实现中应该是真实的 ZMQ 订阅）
-			this.startMockDataStream()
+			// 启动消息订阅循环
+			this.startSubscriptionLoop()
 
-			console.log(`[ArmStateSubscriber] Successfully connected to ${endpoint}`)
+			console.log(
+				`[ArmStateSubscriber] Successfully connected to robot arm at ${this.currentConfig!.ipAddress}:${this.currentConfig!.port}`,
+			)
 		} catch (error) {
 			this.isConnecting = false
 			this.isConnected = false
@@ -128,9 +175,115 @@ export class ArmStateSubscriber extends EventEmitter<ArmStateSubscriberEvents> {
 
 			this.emit("error", error instanceof Error ? error : new Error(errorMessage))
 			this.emit("connectionStatusChanged", "error", errorMessage)
-
-			// 不自动重连，让用户手动重试
 		}
+	}
+
+	private startSubscriptionLoop(): void {
+		// 启动订阅循环，类似于C++中的subscribe_thread
+		// 使用异步执行避免阻塞主线程
+		this.runSubscriptionLoop().catch((error) => {
+			if (this.isConnected) {
+				console.error("[ArmStateSubscriber] Subscription loop error:", error)
+				this.emit("error", error instanceof Error ? error : new Error(String(error)))
+			}
+		})
+	}
+
+	private async runSubscriptionLoop(): Promise<void> {
+		const MESSAGE_TIMEOUT_MS = this.currentConfig?.messageTimeout || 10000 // 使用配置的超时时间
+		const MAX_CONSECUTIVE_TIMEOUTS = this.currentConfig?.maxConsecutiveTimeouts || 3 // 使用配置的最大超时次数
+		let consecutiveTimeouts = 0
+
+		console.log(
+			`[ArmStateSubscriber] Starting subscription loop with timeout: ${MESSAGE_TIMEOUT_MS}ms, max consecutive timeouts: ${MAX_CONSECUTIVE_TIMEOUTS}`,
+		)
+
+		try {
+			while (this.isConnected) {
+				let timeoutId: NodeJS.Timeout | undefined
+
+				// 创建超时Promise
+				const timeoutPromise: Promise<never> = new Promise((_, reject) => {
+					timeoutId = setTimeout(() => {
+						reject(new Error(`Timeout after ${MESSAGE_TIMEOUT_MS}ms waiting for ZMQ message`))
+					}, MESSAGE_TIMEOUT_MS)
+				})
+
+				// 创建接收消息Promise
+				const messagePromise = this.zmq_subscriber.receive()
+
+				try {
+					// 使用Promise.race等待消息或超时
+					const result = await Promise.race([messagePromise, timeoutPromise])
+
+					// 清除超时定时器
+					if (timeoutId) {
+						clearTimeout(timeoutId)
+						timeoutId = undefined
+					}
+
+					// 重置连续超时计数
+					consecutiveTimeouts = 0
+
+					if (!this.isConnected) {
+						console.log("[ArmStateSubscriber] Subscription loop stopped by disconnect")
+						break
+					}
+
+					const [topic, message] = result
+
+					try {
+						const data = ParseRobotStateData(message)
+						console.log(`[ArmStateSubscriber] Received state update on topic ${topic}`)
+						this.emit("stateUpdate", data)
+					} catch (parseError) {
+						console.error("[ArmStateSubscriber] Failed to parse received message:", parseError)
+					}
+				} catch (error: any) {
+					// 清除超时定时器
+					if (timeoutId) {
+						clearTimeout(timeoutId)
+						timeoutId = undefined
+					}
+
+					if (!this.isConnected) {
+						console.log("[ArmStateSubscriber] Subscription loop stopped by disconnect")
+						break
+					}
+
+					// 检查是否为超时错误
+					if (error.message && error.message.includes("Timeout")) {
+						consecutiveTimeouts++
+						console.warn(
+							`[ArmStateSubscriber] Message receive timeout (${consecutiveTimeouts}/${MAX_CONSECUTIVE_TIMEOUTS}): ${error.message}`,
+						)
+
+						// 如果连续超时次数过多，触发错误事件
+						if (consecutiveTimeouts >= MAX_CONSECUTIVE_TIMEOUTS) {
+							const timeoutError = new Error(
+								`Connection appears to be lost: ${MAX_CONSECUTIVE_TIMEOUTS} consecutive timeouts`,
+							)
+							console.error("[ArmStateSubscriber] Too many consecutive timeouts, connection may be lost")
+							this.emit("error", timeoutError)
+							this.emit("connectionStatusChanged", "error", timeoutError.message)
+							break
+						}
+					} else {
+						// 其他类型的错误
+						console.error("[ArmStateSubscriber] Subscription loop error:", error)
+						this.emit("error", error instanceof Error ? error : new Error(String(error)))
+						break
+					}
+				}
+			}
+		} catch (error) {
+			if (this.isConnected) {
+				console.error("[ArmStateSubscriber] Subscription loop fatal error:", error)
+				this.emit("error", error instanceof Error ? error : new Error(String(error)))
+			}
+		}
+
+		console.log("[ArmStateSubscriber] Subscription loop ended")
 	}
 
 	async disconnect(): Promise<void> {
@@ -146,10 +299,28 @@ export class ArmStateSubscriber extends EventEmitter<ArmStateSubscriberEvents> {
 			this.mockDataTimer = undefined
 		}
 
-		// TODO: 实际的 libzmq 断开连接逻辑
+		// 关闭ZMQ连接
+		try {
+			// 设置断开连接标志，停止订阅循环
+			this.isConnected = false
+			this.isConnecting = false
 
-		this.isConnected = false
-		this.isConnecting = false
+			// 关闭所有ZMQ socket
+			if (this.zmq_subscriber) {
+				this.zmq_subscriber.close()
+			}
+			if (this.zmq_dealer) {
+				this.zmq_dealer.close()
+			}
+			if (this.zmq_server) {
+				this.zmq_server.close()
+			}
+
+			console.log("[ArmStateSubscriber] All ZMQ sockets closed")
+		} catch (error) {
+			console.error("[ArmStateSubscriber] Error closing ZMQ sockets:", error)
+		}
+
 		this.emit("disconnected")
 		this.emit("connectionStatusChanged", "disconnected")
 	}
@@ -342,44 +513,6 @@ export class ArmStateSubscriber extends EventEmitter<ArmStateSubscriberEvents> {
 			this.reconnectTimer = undefined
 			this.connect()
 		}, this.reconnectInterval)
-	}
-
-	private startMockDataStream(): void {
-		// 清除之前的定时器
-		if (this.mockDataTimer) {
-			clearInterval(this.mockDataTimer)
-		}
-
-		// 模拟数据流 - 实际实现中应该替换为真实的 ZMQ 消息处理
-		this.mockDataTimer = setInterval(() => {
-			if (!this.isConnected) {
-				if (this.mockDataTimer) {
-					clearInterval(this.mockDataTimer)
-					this.mockDataTimer = undefined
-				}
-				return
-			}
-
-			const mockState: RobotArmState = {
-				connected: true,
-				enabled: Math.random() > 0.1, // 90% 概率启用
-				moving: Math.random() > 0.7, // 30% 概率在运动
-				error: Math.random() > 0.95 ? "模拟错误" : null, // 5% 概率有错误
-				currentPose: {
-					x: 150 + (Math.random() - 0.5) * 20,
-					y: -200 + (Math.random() - 0.5) * 20,
-					z: 350 + (Math.random() - 0.5) * 20,
-					roll: 15 + (Math.random() - 0.5) * 10,
-					pitch: -5 + (Math.random() - 0.5) * 10,
-					yaw: 90 + (Math.random() - 0.5) * 10,
-				},
-				jointPositions: Array.from({ length: 6 }, () => (Math.random() - 0.5) * 180),
-				jointVelocities: Array.from({ length: 6 }, () => (Math.random() - 0.5) * 2),
-				jointTorques: Array.from({ length: 6 }, () => (Math.random() - 0.5) * 10),
-			}
-
-			this.emit("stateUpdate", mockState)
-		}, 1000) // 每秒更新一次
 	}
 
 	get connected(): boolean {

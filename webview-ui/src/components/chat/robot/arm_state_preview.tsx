@@ -43,7 +43,7 @@ export const CytoR6ArmStatePreview: React.FC = () => {
 	const { t } = useAppTranslation()
 
 	// 连接设置
-	const [ipAddress, setIpAddress] = useState("192.168.1.100")
+	const [ipAddress, setIpAddress] = useState("127.0.0.1")
 	const [port, setPort] = useState("5555")
 	const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>("disconnected")
 	const [showConnectionSettings, setShowConnectionSettings] = useState(false)
@@ -73,15 +73,18 @@ export const CytoR6ArmStatePreview: React.FC = () => {
 	// 监听来自后端的消息
 	const handleMessages = useCallback((event: MessageEvent) => {
 		const message = event.data
-		if (message.type === "arm_controller_update") {
-			setArmState(message.data)
-		} else if (message.type === "arm_connection_status") {
-			setConnectionStatus(message.status)
-			if (message.status === "connected") {
-				setArmState((prev) => ({ ...prev, connected: true, error: null }))
-			} else if (message.status === "disconnected" || message.status === "error") {
-				setArmState((prev) => ({ ...prev, connected: false, error: message.error || null }))
-			}
+		switch (message.type) {
+			case "arm_controller_update":
+				setArmState(message.data)
+				break
+			case "arm_connection_status":
+				setConnectionStatus(message.status)
+				if (message.status === "connected") {
+					setArmState((prev) => ({ ...prev, connected: true, error: null }))
+				} else if (message.status === "disconnected" || message.status === "error") {
+					setArmState((prev) => ({ ...prev, connected: false, error: message.error || null }))
+				}
+				break
 		}
 	}, [])
 

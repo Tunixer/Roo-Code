@@ -4,6 +4,7 @@ import { ToolResponse } from "../../shared/tools"
 import { formatResponse } from "../prompts/responses"
 import { Subscriber as ZMQSubscriber, Request as ZMQRequest, Dealer as ZMQDealer } from "zeromq"
 import { ParseRobotStateData } from "./message/ArmState"
+import { parseNetworkInfo, ipv4InfoToEndpoint } from "./message/NetworkInfo"
 
 export interface ArmStateSubscriberEvents {
 	stateUpdate: [state: RobotArmState]
@@ -99,19 +100,15 @@ export class ArmStateSubscriber extends EventEmitter<ArmStateSubscriberEvents> {
 			// 2. 发送获取信息请求
 			await this.zmq_server.send("get_info")
 
-			// 3. 接收服务器返回的端口信息
+			// 3. 接收服务器返回的端口信息 (二进制数据)
 			const [response] = await this.zmq_server.receive()
-			const net_infos = JSON.parse(response.toString())
+			const net_infos = parseNetworkInfo(response)
 
-			if (!net_infos || !net_infos.dealer_port || !net_infos.sub_port) {
-				throw new Error("Invalid network info received from server")
-			}
+			const dealer_endpoint = ipv4InfoToEndpoint(net_infos.dealer_info)
+			const sub_endpoint = ipv4InfoToEndpoint(net_infos.sub_info)
 
-			const dealer_endpoint = `tcp://${this.currentConfig!.ipAddress}:${net_infos.dealer_port}`
-			const sub_endpoint = `tcp://${this.currentConfig!.ipAddress}:${net_infos.sub_port}`
-
-			console.log(`[ArmStateSubscriber] dealer_info: ${this.currentConfig!.ipAddress}:${net_infos.dealer_port}`)
-			console.log(`[ArmStateSubscriber] sub_info: ${this.currentConfig!.ipAddress}:${net_infos.sub_port}`)
+			console.log(`[ArmStateSubscriber] dealer_info: ${dealer_endpoint}`)
+			console.log(`[ArmStateSubscriber] sub_info: ${sub_endpoint}`)
 
 			// 4. 连接到DEALER socket (用于发送命令)
 			this.zmq_dealer.connect(dealer_endpoint)
@@ -120,7 +117,7 @@ export class ArmStateSubscriber extends EventEmitter<ArmStateSubscriberEvents> {
 			// 5. 连接到SUB socket (用于订阅状态)
 			this.zmq_subscriber.connect(sub_endpoint)
 			// 订阅所有消息 (空字符串表示订阅所有)
-			this.zmq_subscriber.subscribe(this.currentConfig!.topic || "")
+			this.zmq_subscriber.subscribe("")
 			console.log(`[ArmStateSubscriber] Connected to subscriber at ${sub_endpoint}`)
 
 			return true
@@ -199,6 +196,9 @@ export class ArmStateSubscriber extends EventEmitter<ArmStateSubscriberEvents> {
 		)
 
 		try {
+			// 使用异步迭代器，与 getRobotStateTool.ts 相同的模式
+			const iterator = this.zmq_subscriber[Symbol.asyncIterator]()
+
 			while (this.isConnected) {
 				let timeoutId: NodeJS.Timeout | undefined
 
@@ -209,10 +209,10 @@ export class ArmStateSubscriber extends EventEmitter<ArmStateSubscriberEvents> {
 					}, MESSAGE_TIMEOUT_MS)
 				})
 
-				// 创建接收消息Promise
-				const messagePromise = this.zmq_subscriber.receive()
-
 				try {
+					// 使用异步迭代器的 next() 方法
+					const messagePromise = iterator.next()
+
 					// 使用Promise.race等待消息或超时
 					const result = await Promise.race([messagePromise, timeoutPromise])
 
@@ -230,11 +230,17 @@ export class ArmStateSubscriber extends EventEmitter<ArmStateSubscriberEvents> {
 						break
 					}
 
-					const [topic, message] = result
+					// 检查迭代器是否结束
+					if (result.done) {
+						console.log("[ArmStateSubscriber] ZMQ subscriber closed")
+						break
+					}
+
+					const [message] = result.value
 
 					try {
 						const data = ParseRobotStateData(message)
-						console.log(`[ArmStateSubscriber] Received state update on topic ${topic}`)
+						// console.log(`[ArmStateSubscriber] Received state update: ${JSON.stringify(data)}`)
 						this.emit("stateUpdate", data)
 					} catch (parseError) {
 						console.error("[ArmStateSubscriber] Failed to parse received message:", parseError)

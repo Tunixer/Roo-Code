@@ -6,12 +6,12 @@ export interface RobotStateData {
 	joint_velocity: number[]
 	joint_torques: number[]
 	cartesian_pose: {
-		x: number
-		y: number
-		z: number
-		roll: number
-		pitch: number
-		yaw: number
+		x: number // 米
+		y: number // 米
+		z: number // 米
+		roll: number // 弧度
+		pitch: number // 弧度
+		yaw: number // 弧度
 	}
 	cartesian_velocity: {
 		vx: number
@@ -116,12 +116,12 @@ function convertToRobotArmState(data: RobotStateData): RobotArmState {
 
 		// 当前位置和姿态 - 映射 cartesian_pose 到 currentPose
 		currentPose: {
-			x: data.cartesian_pose.x,
-			y: data.cartesian_pose.y,
-			z: data.cartesian_pose.z,
-			roll: data.cartesian_pose.roll,
-			pitch: data.cartesian_pose.pitch,
-			yaw: data.cartesian_pose.yaw,
+			x: data.cartesian_pose.x * 1000,
+			y: data.cartesian_pose.y * 1000,
+			z: data.cartesian_pose.z * 1000,
+			roll: (data.cartesian_pose.roll * 180) / Math.PI,
+			pitch: (data.cartesian_pose.pitch * 180) / Math.PI,
+			yaw: (data.cartesian_pose.yaw * 180) / Math.PI,
 		},
 
 		// 关节状态 - 映射字段名

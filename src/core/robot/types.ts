@@ -1,10 +1,10 @@
 export interface RobotPose {
-	x: number
-	y: number
-	z: number
-	roll: number
-	pitch: number
-	yaw: number
+	x: number // 毫米
+	y: number // 毫米
+	z: number // 毫米
+	roll: number // 度
+	pitch: number // 度
+	yaw: number // 度
 }
 
 export interface RobotArmState {

@@ -1,9 +1,11 @@
 import React, { useState, useCallback, useEffect } from "react"
 import { useAppTranslation } from "@/i18n/TranslationContext"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { HomeSetting } from "./home_setting"
 import { AxisControl } from "./axis_control"
 import { ViewPose } from "./common_interface"
+import { vscode } from "@src/utils/vscode"
 
 // 机械臂状态接口
 interface ArmState {
@@ -22,6 +24,9 @@ interface ArmState {
 	jointTorques: number[]
 }
 
+// 连接状态枚举
+type ConnectionStatus = "disconnected" | "connecting" | "connected" | "error"
+
 // 步长选项
 type StepSize = "small" | "medium" | "large"
 
@@ -37,16 +42,22 @@ const DEFAULT_HOME_POSE: ViewPose = { x: 0, y: 0, z: 400, roll: 0, pitch: 0, yaw
 export const CytoR6ArmStatePreview: React.FC = () => {
 	const { t } = useAppTranslation()
 
+	// 连接设置
+	const [ipAddress, setIpAddress] = useState("192.168.1.100")
+	const [port, setPort] = useState("5555")
+	const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>("disconnected")
+	const [showConnectionSettings, setShowConnectionSettings] = useState(false)
+
 	// 机械臂状态
 	const [armState, setArmState] = useState<ArmState>({
-		connected: true,
-		enabled: true,
+		connected: false,
+		enabled: false,
 		moving: false,
 		error: null,
-		currentPose: { x: 150.5, y: -200.3, z: 350.8, roll: 15.2, pitch: -5.7, yaw: 90.1 },
-		jointPositions: [12.5, -45.3, 78.9, -23.1, 56.7, -89.4],
-		jointVelocities: [0.1, -0.3, 0.5, -0.2, 0.4, -0.6],
-		jointTorques: [2.3, -1.8, 4.2, -0.9, 3.1, -2.5],
+		currentPose: { x: 0, y: 0, z: 400, roll: 0, pitch: 0, yaw: 0 },
+		jointPositions: [0, 0, 0, 0, 0, 0],
+		jointVelocities: [0, 0, 0, 0, 0, 0],
+		jointTorques: [0, 0, 0, 0, 0, 0],
 	})
 
 	// 目标位置
@@ -64,6 +75,13 @@ export const CytoR6ArmStatePreview: React.FC = () => {
 		const message = event.data
 		if (message.type === "arm_controller_update") {
 			setArmState(message.data)
+		} else if (message.type === "arm_connection_status") {
+			setConnectionStatus(message.status)
+			if (message.status === "connected") {
+				setArmState((prev) => ({ ...prev, connected: true, error: null }))
+			} else if (message.status === "disconnected" || message.status === "error") {
+				setArmState((prev) => ({ ...prev, connected: false, error: message.error || null }))
+			}
 		}
 	}, [])
 
@@ -74,15 +92,47 @@ export const CytoR6ArmStatePreview: React.FC = () => {
 
 	// 发送命令到后端
 	const sendCommand = useCallback((command: string, data?: any) => {
-		window.parent.postMessage(
-			{
-				type: "robotCommand",
-				command,
-				data,
-			},
-			"*",
-		)
+		vscode.postMessage({
+			type: "robotCommand",
+			command,
+			data,
+		})
 	}, [])
+
+	// IP地址验证
+	const isValidIpAddress = (ip: string): boolean => {
+		const ipRegex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/
+		return ipRegex.test(ip)
+	}
+
+	// 端口验证
+	const isValidPort = (port: string): boolean => {
+		const portNum = parseInt(port)
+		return !isNaN(portNum) && portNum > 0 && portNum <= 65535
+	}
+
+	// 连接到机械臂
+	const handleConnect = useCallback(() => {
+		if (!isValidIpAddress(ipAddress)) {
+			setArmState((prev) => ({ ...prev, error: t("robot:armController.connection.invalidIp") }))
+			return
+		}
+		if (!isValidPort(port)) {
+			setArmState((prev) => ({ ...prev, error: t("robot:armController.connection.invalidPort") }))
+			return
+		}
+
+		setConnectionStatus("connecting")
+		setArmState((prev) => ({ ...prev, error: null }))
+		sendCommand("connect", { ipAddress, port: parseInt(port) })
+	}, [ipAddress, port, sendCommand, t])
+
+	// 断开连接
+	const handleDisconnect = useCallback(() => {
+		sendCommand("disconnect")
+		setConnectionStatus("disconnected")
+		setArmState((prev) => ({ ...prev, connected: false, enabled: false }))
+	}, [sendCommand])
 
 	// 更新目标位置
 	const updateTargetPose = useCallback(
@@ -117,6 +167,34 @@ export const CytoR6ArmStatePreview: React.FC = () => {
 		[armState.enabled, armState.moving, sendCommand],
 	)
 
+	// 获取连接状态颜色
+	const getConnectionStatusColor = () => {
+		switch (connectionStatus) {
+			case "connected":
+				return "text-green-500"
+			case "connecting":
+				return "text-yellow-500"
+			case "error":
+				return "text-red-500"
+			default:
+				return "text-gray-500"
+		}
+	}
+
+	// 获取连接状态文本
+	const getConnectionStatusText = () => {
+		switch (connectionStatus) {
+			case "connected":
+				return t("robot:armController.connected")
+			case "connecting":
+				return t("robot:armController.connection.connecting")
+			case "error":
+				return t("robot:armController.connection.connectionFailed")
+			default:
+				return t("robot:armController.disconnected")
+		}
+	}
+
 	// 获取状态颜色
 	const getStatusColor = () => {
 		if (!armState.connected) return "text-red-500"
@@ -138,6 +216,77 @@ export const CytoR6ArmStatePreview: React.FC = () => {
 	return (
 		<div className="flex flex-col px-4 py-2 mb-2 text-sm rounded bg-vscode-sideBar-background text-vscode-foreground">
 			<div className="font-bold mb-4 text-lg">{t("robot:armController.title")}</div>
+
+			{/* 连接设置区域 */}
+			<div className="mb-6 p-3 border border-vscode-input-border rounded">
+				<div className="flex items-center justify-between mb-3">
+					<span className="font-semibold">{t("robot:armController.connection.title")}</span>
+					<Button
+						variant="outline"
+						size="sm"
+						onClick={() => setShowConnectionSettings(!showConnectionSettings)}>
+						⚙️
+					</Button>
+				</div>
+
+				<div className="flex items-center justify-between mb-2">
+					<span className="text-xs">{t("robot:armController.connection.connectionStatus")}:</span>
+					<span className={`text-xs font-medium ${getConnectionStatusColor()}`}>
+						{getConnectionStatusText()}
+					</span>
+				</div>
+
+				{showConnectionSettings && (
+					<div className="mt-3 space-y-3">
+						<div className="grid grid-cols-2 gap-2">
+							<div>
+								<label className="block text-xs font-medium mb-1">
+									{t("robot:armController.connection.ipAddress")}
+								</label>
+								<Input
+									type="text"
+									value={ipAddress}
+									onChange={(e) => setIpAddress(e.target.value)}
+									placeholder={t("robot:armController.connection.ipPlaceholder")}
+									disabled={connectionStatus === "connecting" || connectionStatus === "connected"}
+									className="text-xs h-7"
+								/>
+							</div>
+							<div>
+								<label className="block text-xs font-medium mb-1">
+									{t("robot:armController.connection.port")}
+								</label>
+								<Input
+									type="text"
+									value={port}
+									onChange={(e) => setPort(e.target.value)}
+									placeholder={t("robot:armController.connection.portPlaceholder")}
+									disabled={connectionStatus === "connecting" || connectionStatus === "connected"}
+									className="text-xs h-7"
+								/>
+							</div>
+						</div>
+
+						<div className="flex gap-2">
+							{connectionStatus === "connected" ? (
+								<Button variant="destructive" size="sm" onClick={handleDisconnect}>
+									{t("robot:armController.connection.disconnect")}
+								</Button>
+							) : (
+								<Button
+									variant="default"
+									size="sm"
+									onClick={handleConnect}
+									disabled={connectionStatus === "connecting"}>
+									{connectionStatus === "connecting"
+										? t("robot:armController.connection.connecting")
+										: t("robot:armController.connection.connect")}
+								</Button>
+							)}
+						</div>
+					</div>
+				)}
+			</div>
 
 			{/* 状态显示区域 */}
 			<div className="mb-6 p-3 border border-vscode-input-border rounded">
@@ -367,114 +516,6 @@ export const CytoR6ArmStatePreview: React.FC = () => {
 					))}
 				</div>
 			</div>
-		</div>
-	)
-}
-
-// 演示组件，用于测试机械臂遥控器功能
-export const ArmControllerDemo: React.FC = () => {
-	const [demoState, setDemoState] = useState({
-		connected: true,
-		enabled: false,
-		moving: false,
-		error: null as string | null,
-	})
-
-	// 模拟状态变化
-	const simulateStateChange = useCallback(
-		(newState: Partial<typeof demoState>) => {
-			setDemoState((prev) => ({ ...prev, ...newState }))
-
-			// 模拟发送状态更新消息
-			setTimeout(() => {
-				window.postMessage(
-					{
-						type: "arm_controller_update",
-						data: {
-							...demoState,
-							...newState,
-							currentPose: { x: 150.5, y: -200.3, z: 350.8, roll: 15.2, pitch: -5.7, yaw: 90.1 },
-							jointPositions: [12.5, -45.3, 78.9, -23.1, 56.7, -89.4],
-							jointVelocities: [0.1, -0.3, 0.5, -0.2, 0.4, -0.6],
-							jointTorques: [2.3, -1.8, 4.2, -0.9, 3.1, -2.5],
-						},
-					},
-					"*",
-				)
-			}, 100)
-		},
-		[demoState],
-	)
-
-	// 监听来自遥控器的命令
-	useEffect(() => {
-		const handleMessage = (event: MessageEvent) => {
-			if (event.data.type === "arm_controller_command") {
-				const { command, data } = event.data
-				console.log("收到命令:", command, data)
-
-				switch (command) {
-					case "enable":
-						simulateStateChange({ enabled: true })
-						break
-					case "disable":
-						simulateStateChange({ enabled: false })
-						break
-					case "home":
-						simulateStateChange({ moving: true })
-						setTimeout(() => simulateStateChange({ moving: false }), 2000)
-						break
-					case "move_to_target":
-						console.log("移动到目标位置:", data)
-						simulateStateChange({ moving: true })
-						setTimeout(() => simulateStateChange({ moving: false }), 3000)
-						break
-					case "stop":
-						simulateStateChange({ moving: false })
-						break
-					case "emergency_stop":
-						simulateStateChange({ enabled: false, moving: false, error: "急停触发" })
-						break
-					case "reset":
-						simulateStateChange({ error: null })
-						break
-					case "save_home_position":
-						console.log("保存Home位置:", data)
-						break
-					case "reset_home_position":
-						console.log("重置Home位置")
-						break
-				}
-			}
-		}
-
-		window.addEventListener("message", handleMessage)
-		return () => window.removeEventListener("message", handleMessage)
-	}, [simulateStateChange])
-
-	return (
-		<div className="p-4">
-			<h2 className="text-lg font-bold mb-4">机械臂遥控器演示</h2>
-			<div className="mb-4 p-3 bg-gray-100 rounded">
-				<h3 className="font-semibold mb-2">演示控制</h3>
-				<div className="flex gap-2 mb-2">
-					<button
-						className="px-3 py-1 bg-blue-500 text-white rounded text-sm"
-						onClick={() => simulateStateChange({ connected: !demoState.connected })}>
-						{demoState.connected ? "断开连接" : "连接"}
-					</button>
-					<button
-						className="px-3 py-1 bg-red-500 text-white rounded text-sm"
-						onClick={() => simulateStateChange({ error: demoState.error ? null : "模拟错误" })}>
-						{demoState.error ? "清除错误" : "触发错误"}
-					</button>
-				</div>
-				<div className="text-sm text-gray-600">
-					当前状态: 连接={demoState.connected ? "是" : "否"}, 启用={demoState.enabled ? "是" : "否"}, 运动=
-					{demoState.moving ? "是" : "否"}, 错误={demoState.error || "无"}
-				</div>
-			</div>
-			<CytoR6ArmStatePreview />
 		</div>
 	)
 }

@@ -13,6 +13,23 @@
 	},
 	"armController": {
 		"title": "Robot Arm Controller",
+		"connection": {
+			"title": "Connection Settings",
+			"ipAddress": "IP Address",
+			"port": "Port",
+			"connect": "Connect",
+			"disconnect": "Disconnect",
+			"connecting": "Connecting...",
+			"reconnect": "Reconnect",
+			"connectionStatus": "Connection Status",
+			"ipPlaceholder": "Enter IP address (e.g., 192.168.1.100)",
+			"portPlaceholder": "Enter port (default: 5555)",
+			"invalidIp": "Invalid IP address format",
+			"invalidPort": "Invalid port number",
+			"connectionFailed": "Connection failed",
+			"connectionLost": "Connection lost",
+			"autoReconnect": "Auto reconnect"
+		},
 		"cartesianControl": "Cartesian Control",
 		"position": "Position",
 		"orientation": "Orientation (RPY)",

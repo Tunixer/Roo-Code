@@ -13,6 +13,23 @@
 	},
 	"armController": {
 		"title": "机械臂遥控器",
+		"connection": {
+			"title": "连接设置",
+			"ipAddress": "IP地址",
+			"port": "端口",
+			"connect": "连接",
+			"disconnect": "断开连接",
+			"connecting": "连接中...",
+			"reconnect": "重新连接",
+			"connectionStatus": "连接状态",
+			"ipPlaceholder": "输入IP地址 (例如: 192.168.1.100)",
+			"portPlaceholder": "输入端口 (默认: 5555)",
+			"invalidIp": "IP地址格式无效",
+			"invalidPort": "端口号无效",
+			"connectionFailed": "连接失败",
+			"connectionLost": "连接丢失",
+			"autoReconnect": "自动重连"
+		},
 		"cartesianControl": "笛卡尔控制",
 		"position": "位置",
 		"orientation": "姿态 (RPY)",

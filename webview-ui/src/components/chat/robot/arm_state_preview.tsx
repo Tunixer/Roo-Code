@@ -1,7 +1,9 @@
 import React, { useState, useCallback, useEffect } from "react"
 import { useAppTranslation } from "@/i18n/TranslationContext"
 import { Button } from "@/components/ui/button"
-import { Slider } from "@/components/ui/slider"
+import { HomeSetting } from "./home_setting"
+import { AxisControl } from "./axis_control"
+import { ViewPose } from "./common_interface"
 
 // 机械臂状态接口
 interface ArmState {
@@ -12,39 +14,12 @@ interface ArmState {
 	error: string | null
 
 	// 当前位置和姿态
-	currentPose: {
-		x: number
-		y: number
-		z: number
-		roll: number
-		pitch: number
-		yaw: number
-	}
+	currentPose: ViewPose
 
 	// 关节状态
 	jointPositions: number[]
 	jointVelocities: number[]
 	jointTorques: number[]
-}
-
-// 目标位置接口
-interface TargetPose {
-	x: number
-	y: number
-	z: number
-	roll: number
-	pitch: number
-	yaw: number
-}
-
-// Home位置接口
-interface HomePose {
-	x: number
-	y: number
-	z: number
-	roll: number
-	pitch: number
-	yaw: number
 }
 
 // 步长选项
@@ -57,14 +32,7 @@ const STEP_SIZES = {
 }
 
 // 默认Home位置
-const DEFAULT_HOME_POSE: HomePose = {
-	x: 0,
-	y: 0,
-	z: 400,
-	roll: 0,
-	pitch: 0,
-	yaw: 0,
-}
+const DEFAULT_HOME_POSE: ViewPose = { x: 0, y: 0, z: 400, roll: 0, pitch: 0, yaw: 0 }
 
 export const CytoR6ArmStatePreview: React.FC = () => {
 	const { t } = useAppTranslation()
@@ -82,19 +50,11 @@ export const CytoR6ArmStatePreview: React.FC = () => {
 	})
 
 	// 目标位置
-	const [targetPose, setTargetPose] = useState<TargetPose>({
-		x: 150.5,
-		y: -200.3,
-		z: 350.8,
-		roll: 15.2,
-		pitch: -5.7,
-		yaw: 90.1,
-	})
+	const [targetPose, setTargetPose] = useState<ViewPose>(DEFAULT_HOME_POSE)
 
 	// Home位置设置
-	const [homePose, setHomePose] = useState<HomePose>(DEFAULT_HOME_POSE)
+	const [homePose, setHomePose] = useState<ViewPose>(DEFAULT_HOME_POSE)
 	const [showHomeSettings, setShowHomeSettings] = useState(false)
-	const [homeMessage, setHomeMessage] = useState<string | null>(null)
 
 	// 步长设置
 	const [stepSize, setStepSize] = useState<StepSize>("medium")
@@ -125,47 +85,17 @@ export const CytoR6ArmStatePreview: React.FC = () => {
 	}, [])
 
 	// 更新目标位置
-	const updateTargetPose = useCallback((axis: keyof TargetPose, value: number) => {
+	const updateTargetPose = useCallback((axis: keyof ViewPose, value: number) => {
 		setTargetPose((prev) => ({ ...prev, [axis]: value }))
 	}, [])
 
 	// 增减位置值
-	const adjustValue = useCallback((axis: keyof TargetPose, delta: number) => {
+	const adjustValue = useCallback((axis: keyof ViewPose, delta: number) => {
 		setTargetPose((prev) => ({
 			...prev,
 			[axis]: prev[axis] + delta,
 		}))
 	}, [])
-
-	// 更新Home位置
-	const updateHomePose = useCallback((axis: keyof HomePose, value: number) => {
-		setHomePose((prev) => ({ ...prev, [axis]: value }))
-	}, [])
-
-	// 保存Home位置
-	const saveHomePosition = useCallback(() => {
-		// 发送保存Home位置命令到后端
-		sendCommand("save_home_position", homePose)
-		setHomeMessage(t("robot:armController.homePositionSaved"))
-		setTimeout(() => setHomeMessage(null), 3000)
-	}, [homePose, sendCommand, t])
-
-	// 重置Home位置
-	const resetHomePosition = useCallback(() => {
-		setHomePose(DEFAULT_HOME_POSE)
-		sendCommand("reset_home_position")
-		setHomeMessage(t("robot:armController.homePositionReset"))
-		setTimeout(() => setHomeMessage(null), 3000)
-	}, [sendCommand, t])
-
-	// 设置当前位置为Home位置
-	const setCurrentAsHome = useCallback(() => {
-		const newHomePose = { ...armState.currentPose }
-		setHomePose(newHomePose)
-		sendCommand("save_home_position", newHomePose)
-		setHomeMessage(t("robot:armController.homePositionSaved"))
-		setTimeout(() => setHomeMessage(null), 3000)
-	}, [armState.currentPose, sendCommand, t])
 
 	// 获取状态颜色
 	const getStatusColor = () => {
@@ -264,152 +194,13 @@ export const CytoR6ArmStatePreview: React.FC = () => {
 
 				{/* Home位置设置面板 */}
 				{showHomeSettings && (
-					<div className="mb-4 p-3 border border-vscode-input-border rounded bg-vscode-input-background">
-						<div className="flex items-center justify-between mb-3">
-							<span className="font-semibold text-sm">{t("robot:armController.homeSettings")}</span>
-							{homeMessage && <span className="text-xs text-green-500">{homeMessage}</span>}
-						</div>
-
-						{/* Home位置显示 */}
-						<div className="grid grid-cols-2 gap-4 mb-3 text-xs">
-							<div>
-								<div className="font-medium mb-1">{t("robot:armController.position")}</div>
-								<div>
-									X: {homePose.x.toFixed(2)} {t("robot:armController.units.mm")}
-								</div>
-								<div>
-									Y: {homePose.y.toFixed(2)} {t("robot:armController.units.mm")}
-								</div>
-								<div>
-									Z: {homePose.z.toFixed(2)} {t("robot:armController.units.mm")}
-								</div>
-							</div>
-							<div>
-								<div className="font-medium mb-1">{t("robot:armController.orientation")}</div>
-								<div>
-									R: {homePose.roll.toFixed(2)} {t("robot:armController.units.deg")}
-								</div>
-								<div>
-									P: {homePose.pitch.toFixed(2)} {t("robot:armController.units.deg")}
-								</div>
-								<div>
-									Y: {homePose.yaw.toFixed(2)} {t("robot:armController.units.deg")}
-								</div>
-							</div>
-						</div>
-
-						{/* Home位置控制 */}
-						<div className="space-y-2 mb-3">
-							{/* X轴 */}
-							<div className="flex items-center gap-2">
-								<span className="w-8 text-xs">X:</span>
-								<div className="flex-1">
-									<Slider
-										min={-500}
-										max={500}
-										step={0.1}
-										value={[homePose.x]}
-										onValueChange={([value]) => updateHomePose("x", value)}
-									/>
-								</div>
-								<span className="w-16 text-xs text-center">{homePose.x.toFixed(1)} mm</span>
-							</div>
-
-							{/* Y轴 */}
-							<div className="flex items-center gap-2">
-								<span className="w-8 text-xs">Y:</span>
-								<div className="flex-1">
-									<Slider
-										min={-500}
-										max={500}
-										step={0.1}
-										value={[homePose.y]}
-										onValueChange={([value]) => updateHomePose("y", value)}
-									/>
-								</div>
-								<span className="w-16 text-xs text-center">{homePose.y.toFixed(1)} mm</span>
-							</div>
-
-							{/* Z轴 */}
-							<div className="flex items-center gap-2">
-								<span className="w-8 text-xs">Z:</span>
-								<div className="flex-1">
-									<Slider
-										min={0}
-										max={800}
-										step={0.1}
-										value={[homePose.z]}
-										onValueChange={([value]) => updateHomePose("z", value)}
-									/>
-								</div>
-								<span className="w-16 text-xs text-center">{homePose.z.toFixed(1)} mm</span>
-							</div>
-
-							{/* Roll */}
-							<div className="flex items-center gap-2">
-								<span className="w-8 text-xs">R:</span>
-								<div className="flex-1">
-									<Slider
-										min={-180}
-										max={180}
-										step={0.1}
-										value={[homePose.roll]}
-										onValueChange={([value]) => updateHomePose("roll", value)}
-									/>
-								</div>
-								<span className="w-16 text-xs text-center">{homePose.roll.toFixed(1)}°</span>
-							</div>
-
-							{/* Pitch */}
-							<div className="flex items-center gap-2">
-								<span className="w-8 text-xs">P:</span>
-								<div className="flex-1">
-									<Slider
-										min={-90}
-										max={90}
-										step={0.1}
-										value={[homePose.pitch]}
-										onValueChange={([value]) => updateHomePose("pitch", value)}
-									/>
-								</div>
-								<span className="w-16 text-xs text-center">{homePose.pitch.toFixed(1)}°</span>
-							</div>
-
-							{/* Yaw */}
-							<div className="flex items-center gap-2">
-								<span className="w-8 text-xs">Y:</span>
-								<div className="flex-1">
-									<Slider
-										min={-180}
-										max={180}
-										step={0.1}
-										value={[homePose.yaw]}
-										onValueChange={([value]) => updateHomePose("yaw", value)}
-									/>
-								</div>
-								<span className="w-16 text-xs text-center">{homePose.yaw.toFixed(1)}°</span>
-							</div>
-						</div>
-
-						{/* Home位置操作按钮 */}
-						<div className="flex gap-2">
-							<Button variant="default" size="sm" onClick={saveHomePosition}>
-								{t("robot:armController.saveHomePosition")}
-							</Button>
-
-							<Button
-								variant="outline"
-								size="sm"
-								onClick={setCurrentAsHome}
-								disabled={!armState.connected}>
-								{t("robot:armController.setHomePosition")}
-							</Button>
-
-							<Button variant="secondary" size="sm" onClick={resetHomePosition}>
-								{t("robot:armController.resetHomePosition")}
-							</Button>
-						</div>
-					</div>
+					<HomeSetting
+						homePose={homePose}
+						setHomePose={setHomePose}
+						armConnected={armState.connected}
+						currentPose={armState.currentPose}
+						onSendCommand={sendCommand}
+					/>
 				)}
 
 				{/* 步长选择 */}
@@ -435,244 +226,94 @@ export const CytoR6ArmStatePreview: React.FC = () => {
 				<div className="mb-4">
 					<div className="font-medium mb-2">{t("robot:armController.position")}</div>
 
-					{/* X轴控制 */}
-					<div className="mb-3">
-						<div className="flex items-center justify-between mb-1">
-							<span className="text-xs">{t("robot:armController.xAxis")}</span>
-							<span className="text-xs">
-								{t("robot:armController.currentValue", {
-									value: `${armState.currentPose.x.toFixed(2)} mm`,
-								})}
-							</span>
-						</div>
-						<div className="flex items-center gap-2">
-							<Button
-								variant="outline"
-								size="sm"
-								onClick={() => adjustValue("x", -STEP_SIZES[stepSize].position)}
-								disabled={!armState.enabled || armState.moving}>
-								-
-							</Button>
-							<div className="flex-1">
-								<Slider
-									min={-500}
-									max={500}
-									step={0.1}
-									value={[targetPose.x]}
-									onValueChange={([value]) => updateTargetPose("x", value)}
-									disabled={!armState.enabled || armState.moving}
-								/>
-							</div>
-							<Button
-								variant="outline"
-								size="sm"
-								onClick={() => adjustValue("x", STEP_SIZES[stepSize].position)}
-								disabled={!armState.enabled || armState.moving}>
-								+
-							</Button>
-							<span className="w-16 text-xs text-center">{targetPose.x.toFixed(1)} mm</span>
-						</div>
-					</div>
+					<AxisControl
+						label={t("robot:armController.xAxis")}
+						currentValue={armState.currentPose.x}
+						targetValue={targetPose.x}
+						unit="mm"
+						min={-500}
+						max={500}
+						step={0.1}
+						stepSize={STEP_SIZES[stepSize].position}
+						onAdjust={(delta) => adjustValue("x", delta)}
+						onUpdate={(value) => updateTargetPose("x", value)}
+						disabled={!armState.enabled || armState.moving}
+					/>
 
-					{/* Y轴控制 */}
-					<div className="mb-3">
-						<div className="flex items-center justify-between mb-1">
-							<span className="text-xs">{t("robot:armController.yAxis")}</span>
-							<span className="text-xs">
-								{t("robot:armController.currentValue", {
-									value: `${armState.currentPose.y.toFixed(2)} mm`,
-								})}
-							</span>
-						</div>
-						<div className="flex items-center gap-2">
-							<Button
-								variant="outline"
-								size="sm"
-								onClick={() => adjustValue("y", -STEP_SIZES[stepSize].position)}
-								disabled={!armState.enabled || armState.moving}>
-								-
-							</Button>
-							<div className="flex-1">
-								<Slider
-									min={-500}
-									max={500}
-									step={0.1}
-									value={[targetPose.y]}
-									onValueChange={([value]) => updateTargetPose("y", value)}
-									disabled={!armState.enabled || armState.moving}
-								/>
-							</div>
-							<Button
-								variant="outline"
-								size="sm"
-								onClick={() => adjustValue("y", STEP_SIZES[stepSize].position)}
-								disabled={!armState.enabled || armState.moving}>
-								+
-							</Button>
-							<span className="w-16 text-xs text-center">{targetPose.y.toFixed(1)} mm</span>
-						</div>
-					</div>
+					<AxisControl
+						label={t("robot:armController.yAxis")}
+						currentValue={armState.currentPose.y}
+						targetValue={targetPose.y}
+						unit="mm"
+						min={-500}
+						max={500}
+						step={0.1}
+						stepSize={STEP_SIZES[stepSize].position}
+						onAdjust={(delta) => adjustValue("y", delta)}
+						onUpdate={(value) => updateTargetPose("y", value)}
+						disabled={!armState.enabled || armState.moving}
+					/>
 
-					{/* Z轴控制 */}
-					<div className="mb-3">
-						<div className="flex items-center justify-between mb-1">
-							<span className="text-xs">{t("robot:armController.zAxis")}</span>
-							<span className="text-xs">
-								{t("robot:armController.currentValue", {
-									value: `${armState.currentPose.z.toFixed(2)} mm`,
-								})}
-							</span>
-						</div>
-						<div className="flex items-center gap-2">
-							<Button
-								variant="outline"
-								size="sm"
-								onClick={() => adjustValue("z", -STEP_SIZES[stepSize].position)}
-								disabled={!armState.enabled || armState.moving}>
-								-
-							</Button>
-							<div className="flex-1">
-								<Slider
-									min={0}
-									max={800}
-									step={0.1}
-									value={[targetPose.z]}
-									onValueChange={([value]) => updateTargetPose("z", value)}
-									disabled={!armState.enabled || armState.moving}
-								/>
-							</div>
-							<Button
-								variant="outline"
-								size="sm"
-								onClick={() => adjustValue("z", STEP_SIZES[stepSize].position)}
-								disabled={!armState.enabled || armState.moving}>
-								+
-							</Button>
-							<span className="w-16 text-xs text-center">{targetPose.z.toFixed(1)} mm</span>
-						</div>
-					</div>
+					<AxisControl
+						label={t("robot:armController.zAxis")}
+						currentValue={armState.currentPose.z}
+						targetValue={targetPose.z}
+						unit="mm"
+						min={0}
+						max={800}
+						step={0.1}
+						stepSize={STEP_SIZES[stepSize].position}
+						onAdjust={(delta) => adjustValue("z", delta)}
+						onUpdate={(value) => updateTargetPose("z", value)}
+						disabled={!armState.enabled || armState.moving}
+					/>
 				</div>
 
 				{/* 姿态控制 */}
 				<div className="mb-4">
 					<div className="font-medium mb-2">{t("robot:armController.orientation")}</div>
 
-					{/* Roll控制 */}
-					<div className="mb-3">
-						<div className="flex items-center justify-between mb-1">
-							<span className="text-xs">{t("robot:armController.roll")}</span>
-							<span className="text-xs">
-								{t("robot:armController.currentValue", {
-									value: `${armState.currentPose.roll.toFixed(2)}°`,
-								})}
-							</span>
-						</div>
-						<div className="flex items-center gap-2">
-							<Button
-								variant="outline"
-								size="sm"
-								onClick={() => adjustValue("roll", -STEP_SIZES[stepSize].orientation)}
-								disabled={!armState.enabled || armState.moving}>
-								-
-							</Button>
-							<div className="flex-1">
-								<Slider
-									min={-180}
-									max={180}
-									step={0.1}
-									value={[targetPose.roll]}
-									onValueChange={([value]) => updateTargetPose("roll", value)}
-									disabled={!armState.enabled || armState.moving}
-								/>
-							</div>
-							<Button
-								variant="outline"
-								size="sm"
-								onClick={() => adjustValue("roll", STEP_SIZES[stepSize].orientation)}
-								disabled={!armState.enabled || armState.moving}>
-								+
-							</Button>
-							<span className="w-16 text-xs text-center">{targetPose.roll.toFixed(1)}°</span>
-						</div>
-					</div>
+					<AxisControl
+						label={t("robot:armController.roll")}
+						currentValue={armState.currentPose.roll}
+						targetValue={targetPose.roll}
+						unit="°"
+						min={-180}
+						max={180}
+						step={0.1}
+						stepSize={STEP_SIZES[stepSize].orientation}
+						onAdjust={(delta) => adjustValue("roll", delta)}
+						onUpdate={(value) => updateTargetPose("roll", value)}
+						disabled={!armState.enabled || armState.moving}
+					/>
 
-					{/* Pitch控制 */}
-					<div className="mb-3">
-						<div className="flex items-center justify-between mb-1">
-							<span className="text-xs">{t("robot:armController.pitch")}</span>
-							<span className="text-xs">
-								{t("robot:armController.currentValue", {
-									value: `${armState.currentPose.pitch.toFixed(2)}°`,
-								})}
-							</span>
-						</div>
-						<div className="flex items-center gap-2">
-							<Button
-								variant="outline"
-								size="sm"
-								onClick={() => adjustValue("pitch", -STEP_SIZES[stepSize].orientation)}
-								disabled={!armState.enabled || armState.moving}>
-								-
-							</Button>
-							<div className="flex-1">
-								<Slider
-									min={-90}
-									max={90}
-									step={0.1}
-									value={[targetPose.pitch]}
-									onValueChange={([value]) => updateTargetPose("pitch", value)}
-									disabled={!armState.enabled || armState.moving}
-								/>
-							</div>
-							<Button
-								variant="outline"
-								size="sm"
-								onClick={() => adjustValue("pitch", STEP_SIZES[stepSize].orientation)}
-								disabled={!armState.enabled || armState.moving}>
-								+
-							</Button>
-							<span className="w-16 text-xs text-center">{targetPose.pitch.toFixed(1)}°</span>
-						</div>
-					</div>
+					<AxisControl
+						label={t("robot:armController.pitch")}
+						currentValue={armState.currentPose.pitch}
+						targetValue={targetPose.pitch}
+						unit="°"
+						min={-90}
+						max={90}
+						step={0.1}
+						stepSize={STEP_SIZES[stepSize].orientation}
+						onAdjust={(delta) => adjustValue("pitch", delta)}
+						onUpdate={(value) => updateTargetPose("pitch", value)}
+						disabled={!armState.enabled || armState.moving}
+					/>
 
-					{/* Yaw控制 */}
-					<div className="mb-3">
-						<div className="flex items-center justify-between mb-1">
-							<span className="text-xs">{t("robot:armController.yaw")}</span>
-							<span className="text-xs">
-								{t("robot:armController.currentValue", {
-									value: `${armState.currentPose.yaw.toFixed(2)}°`,
-								})}
-							</span>
-						</div>
-						<div className="flex items-center gap-2">
-							<Button
-								variant="outline"
-								size="sm"
-								onClick={() => adjustValue("yaw", -STEP_SIZES[stepSize].orientation)}
-								disabled={!armState.enabled || armState.moving}>
-								-
-							</Button>
-							<div className="flex-1">
-								<Slider
-									min={-180}
-									max={180}
-									step={0.1}
-									value={[targetPose.yaw]}
-									onValueChange={([value]) => updateTargetPose("yaw", value)}
-									disabled={!armState.enabled || armState.moving}
-								/>
-							</div>
-							<Button
-								variant="outline"
-								size="sm"
-								onClick={() => adjustValue("yaw", STEP_SIZES[stepSize].orientation)}
-								disabled={!armState.enabled || armState.moving}>
-								+
-							</Button>
-							<span className="w-16 text-xs text-center">{targetPose.yaw.toFixed(1)}°</span>
-						</div>
-					</div>
+					<AxisControl
+						label={t("robot:armController.yaw")}
+						currentValue={armState.currentPose.yaw}
+						targetValue={targetPose.yaw}
+						unit="°"
+						min={-180}
+						max={180}
+						step={0.1}
+						stepSize={STEP_SIZES[stepSize].orientation}
+						onAdjust={(delta) => adjustValue("yaw", delta)}
+						onUpdate={(value) => updateTargetPose("yaw", value)}
+						disabled={!armState.enabled || armState.moving}
+					/>
 				</div>
 
 				{/* 执行按钮 */}

@@ -68,6 +68,8 @@ export interface ExtensionMessage {
 		| "acceptInput"
 		| "setHistoryPreviewCollapsed"
 		| "r6arm_state_update"
+		| "robotStateUpdate"
+		| "robotError"
 	text?: string
 	action?:
 		| "chatButtonClicked"
@@ -105,6 +107,8 @@ export interface ExtensionMessage {
 	results?: { path: string; type: "file" | "folder"; label?: string }[]
 	error?: string
 	payload?: any
+	// Robot-related properties
+	data?: any
 }
 
 export type ExtensionState = Pick<

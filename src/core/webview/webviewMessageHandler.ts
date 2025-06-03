@@ -1245,6 +1245,42 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 			await provider.postStateToWebview()
 			break
 		}
+
+		// Robot-related message handling
+		case "robotCommand":
+			if (message.command) {
+				try {
+					await provider.handleRobotCommand({
+						type: "arm_controller_command",
+						command: message.command,
+						data: message.data,
+					})
+				} catch (error) {
+					console.error("[WebviewMessageHandler] Error handling robot command:", error)
+					provider.postMessageToWebview({
+						type: "robotError",
+						error: error instanceof Error ? error.message : String(error),
+					})
+				}
+			}
+			break
+
+		case "requestRobotState":
+			try {
+				const robotState = provider.getRobotState()
+				if (robotState) {
+					provider.postMessageToWebview({
+						type: "robotStateUpdate",
+						data: {
+							type: "arm_controller_update",
+							data: robotState,
+						},
+					})
+				}
+			} catch (error) {
+				console.error("[WebviewMessageHandler] Error getting robot state:", error)
+			}
+			break
 	}
 }
 

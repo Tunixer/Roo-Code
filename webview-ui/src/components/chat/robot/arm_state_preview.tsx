@@ -76,7 +76,7 @@ export const CytoR6ArmStatePreview: React.FC = () => {
 	const sendCommand = useCallback((command: string, data?: any) => {
 		window.parent.postMessage(
 			{
-				type: "arm_controller_command",
+				type: "robotCommand",
 				command,
 				data,
 			},
@@ -85,17 +85,37 @@ export const CytoR6ArmStatePreview: React.FC = () => {
 	}, [])
 
 	// 更新目标位置
-	const updateTargetPose = useCallback((axis: keyof ViewPose, value: number) => {
-		setTargetPose((prev) => ({ ...prev, [axis]: value }))
-	}, [])
+	const updateTargetPose = useCallback(
+		(axis: keyof ViewPose, value: number) => {
+			setTargetPose((prev) => {
+				const newPose = { ...prev, [axis]: value }
+				// 自动执行移动命令
+				if (armState.enabled && !armState.moving) {
+					sendCommand("move_to_target", newPose)
+				}
+				return newPose
+			})
+		},
+		[armState.enabled, armState.moving, sendCommand],
+	)
 
 	// 增减位置值
-	const adjustValue = useCallback((axis: keyof ViewPose, delta: number) => {
-		setTargetPose((prev) => ({
-			...prev,
-			[axis]: prev[axis] + delta,
-		}))
-	}, [])
+	const adjustValue = useCallback(
+		(axis: keyof ViewPose, delta: number) => {
+			setTargetPose((prev) => {
+				const newPose = {
+					...prev,
+					[axis]: prev[axis] + delta,
+				}
+				// 自动执行移动命令
+				if (armState.enabled && !armState.moving) {
+					sendCommand("move_to_target", newPose)
+				}
+				return newPose
+			})
+		},
+		[armState.enabled, armState.moving, sendCommand],
+	)
 
 	// 获取状态颜色
 	const getStatusColor = () => {
@@ -318,13 +338,6 @@ export const CytoR6ArmStatePreview: React.FC = () => {
 
 				{/* 执行按钮 */}
 				<div className="flex gap-2">
-					<Button
-						variant="default"
-						onClick={() => sendCommand("move_to_target", targetPose)}
-						disabled={!armState.enabled || armState.moving}>
-						{t("robot:armController.moveToTarget")}
-					</Button>
-
 					<Button
 						variant="secondary"
 						onClick={() => sendCommand("stop")}

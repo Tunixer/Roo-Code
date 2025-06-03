@@ -125,6 +125,8 @@ export interface WebviewMessage {
 		| "searchFiles"
 		| "toggleApiConfigPin"
 		| "setHistoryPreviewCollapsed"
+		| "robotCommand"
+		| "requestRobotState"
 	text?: string
 	disabled?: boolean
 	askResponse?: ClineAskResponse
@@ -152,6 +154,9 @@ export interface WebviewMessage {
 	ids?: string[]
 	hasSystemPromptOverride?: boolean
 	historyPreviewCollapsed?: boolean
+	// Robot-related properties
+	command?: string
+	data?: any
 }
 
 export const checkoutDiffPayloadSchema = z.object({

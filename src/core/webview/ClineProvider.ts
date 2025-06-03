@@ -50,6 +50,8 @@ import { telemetryService } from "../../services/telemetry/TelemetryService"
 import { getWorkspacePath } from "../../utils/path"
 import { webviewMessageHandler } from "./webviewMessageHandler"
 import { WebviewMessage } from "../../shared/WebviewMessage"
+import { RobotStateManager } from "../robot/RobotStateManager"
+import { RobotCommandMessage, RobotArmState } from "../robot/types"
 
 /**
  * https://github.com/microsoft/vscode-webview-ui-toolkit-samples/blob/main/default/weather-webview/src/providers/WeatherViewProvider.ts
@@ -72,6 +74,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 		return this._workspaceTracker
 	}
 	protected mcpHub?: McpHub // Change from private to protected
+	private robotStateManager?: RobotStateManager
 
 	public isViewLaunched = false
 	public settingsImportedAt?: number
@@ -111,6 +114,19 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 			.catch((error) => {
 				this.log(`Failed to initialize MCP Hub: ${error}`)
 			})
+
+		// Initialize Robot State Manager
+		this.initializeRobotStateManager()
+	}
+
+	private async initializeRobotStateManager(): Promise<void> {
+		try {
+			this.robotStateManager = new RobotStateManager(this)
+			await this.robotStateManager.initialize()
+			this.log("Robot state manager initialized successfully")
+		} catch (error) {
+			this.log(`Failed to initialize robot state manager: ${error}`)
+		}
 	}
 
 	// Adds a new Cline instance to clineStack, marking the start of a new task.
@@ -215,6 +231,8 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 		this._workspaceTracker = undefined
 		await this.mcpHub?.unregisterClient()
 		this.mcpHub = undefined
+		await this.robotStateManager?.dispose()
+		this.robotStateManager = undefined
 		this.customModesManager?.dispose()
 		this.log("Disposed all disposables")
 		ClineProvider.activeInstances.delete(this)
@@ -732,7 +750,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 		content security policy of your webview to only allow scripts that have a specific nonce
 		create a content security policy meta tag so that only loading scripts with a nonce is allowed
 		As your extension grows you will likely want to add custom styles, fonts, and/or images to your webview. If you do, you will need to update the content security policy meta tag to explicity allow for these resources. E.g.
-				<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource}; font-src ${webview.cspSource}; img-src ${webview.cspSource} https:; script-src 'nonce-${nonce}';">
+				<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource}; font-src ${webview.cspSource}; img-src ${webview.cspSource} https:; script-src 'nonce-${nonce}' https://us-assets.i.posthog.com; connect-src https://openrouter.ai https://api.requesty.ai https://us.i.posthog.com https://us-assets.i.posthog.com;">
 		- 'unsafe-inline' is required for styles due to vscode-webview-toolkit's dynamic style injection
 		- since we pass base64 images to the webview, we need to specify img-src ${webview.cspSource} data:;
 
@@ -1533,5 +1551,21 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 		}
 
 		return properties
+	}
+
+	// Robot-related methods
+	public async handleRobotCommand(message: RobotCommandMessage): Promise<void> {
+		if (!this.robotStateManager) {
+			throw new Error("Robot state manager not initialized")
+		}
+		await this.robotStateManager.handleCommand(message)
+	}
+
+	public getRobotState(): RobotArmState | undefined {
+		return this.robotStateManager?.getCurrentState()
+	}
+
+	public isRobotConnected(): boolean {
+		return this.robotStateManager?.isConnected() ?? false
 	}
 }

@@ -1,18 +1,12 @@
 import { Message } from "zeromq"
 import { RobotArmState } from "../types"
+import { PoseRad } from "../../../shared/robot-types"
 
 export interface RobotStateData {
 	joint_position: number[]
 	joint_velocity: number[]
 	joint_torques: number[]
-	cartesian_pose: {
-		x: number // 米
-		y: number // 米
-		z: number // 米
-		roll: number // 弧度
-		pitch: number // 弧度
-		yaw: number // 弧度
-	}
+	cartesian_pose: PoseRad
 	cartesian_velocity: {
 		vx: number
 		vy: number

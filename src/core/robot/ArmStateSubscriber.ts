@@ -5,6 +5,9 @@ import { formatResponse } from "../prompts/responses"
 import { Subscriber as ZMQSubscriber, Request as ZMQRequest, Dealer as ZMQDealer } from "zeromq"
 import { ParseRobotStateData } from "./message/ArmState"
 import { parseNetworkInfo, ipv4InfoToEndpoint } from "./message/NetworkInfo"
+import { IBasicMoveType, BasicMoveReq } from "./message/BasicMove"
+import { CommandId, ICommandType, IRequestType } from "./message/Command"
+import { PoseDeg } from "../../shared/robot-types"
 
 export interface ArmStateSubscriberEvents {
 	stateUpdate: [state: RobotArmState]
@@ -38,6 +41,7 @@ export class ArmStateSubscriber extends EventEmitter<ArmStateSubscriberEvents> {
 	private zmq_server: ZMQRequest
 	private zmq_dealer: ZMQDealer
 	private zmq_subscriber: ZMQSubscriber
+	private command_id_counter = 0
 	constructor(
 		provider?: any,
 		private readonly defaultConfig: ConnectionConfig = {
@@ -447,7 +451,7 @@ export class ArmStateSubscriber extends EventEmitter<ArmStateSubscriberEvents> {
 		return formatResponse.toolResult(`Moving to home position: ${JSON.stringify(homePose)}`, [])
 	}
 
-	private async handleMoveToTarget(targetPose: any): Promise<ToolResponse> {
+	private async handleMoveToTarget(targetPose: PoseDeg): Promise<ToolResponse> {
 		if (!this.isConnected) {
 			return formatResponse.toolError("Robot arm is not connected")
 		}
@@ -455,6 +459,25 @@ export class ArmStateSubscriber extends EventEmitter<ArmStateSubscriberEvents> {
 		console.log("[ArmStateSubscriber] Moving to target position:", targetPose)
 
 		// TODO: 发送移动命令到实际的机械臂
+		let move_req = new BasicMoveReq({
+			request_type: IRequestType.kNonCallback,
+			command_id: new CommandId(this.command_id_counter++),
+			command_type: ICommandType.kBasicMove,
+			move_type: IBasicMoveType.kCartesianPose,
+			// 单位：米，弧度
+			move_target: {
+				position: [targetPose.x / 1000, targetPose.y / 1000, targetPose.z / 1000],
+				orientation: [
+					(targetPose.roll / 180) * Math.PI,
+					(targetPose.pitch / 180) * Math.PI,
+					(targetPose.yaw / 180) * Math.PI,
+				],
+			},
+		})
+
+		const send_arr = BasicMoveReq.toArrayBuffer(move_req)
+
+		this.zmq_dealer.send(send_arr)
 
 		return formatResponse.toolResult(`Moving to target position: ${JSON.stringify(targetPose)}`, [])
 	}

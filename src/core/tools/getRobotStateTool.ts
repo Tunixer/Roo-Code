@@ -3,18 +3,12 @@ import { PushToolResult, ToolUse, RemoveClosingTag, ToolDescription } from "../.
 import { formatResponse } from "../prompts/responses"
 import Anthropic from "@anthropic-ai/sdk"
 import { Subscriber, Message } from "zeromq"
+import { PoseRad } from "../../shared/robot-types"
 export interface RobotStateData {
 	joint_position: number[]
 	joint_velocity: number[]
 	joint_torques: number[]
-	cartesian_pose: {
-		x: number
-		y: number
-		z: number
-		roll: number
-		pitch: number
-		yaw: number
-	}
+	cartesian_pose: PoseRad
 	cartesian_velocity: {
 		vx: number
 		vy: number

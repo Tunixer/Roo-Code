@@ -2,17 +2,17 @@ import React, { useState, useCallback } from "react"
 import { useAppTranslation } from "@/i18n/TranslationContext"
 import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
-import { ViewPose } from "./common_interface"
+import { PoseDeg } from "@roo/shared/robot-types"
 
 interface HomeSettingProps {
-	homePose: ViewPose
-	setHomePose: React.Dispatch<React.SetStateAction<ViewPose>>
+	homePose: PoseDeg
+	setHomePose: React.Dispatch<React.SetStateAction<PoseDeg>>
 	armConnected: boolean
-	currentPose: ViewPose
+	currentPose: PoseDeg
 	onSendCommand: (command: string, data?: any) => void
 }
 
-const DEFAULT_HOME_POSE: ViewPose = { x: 0, y: 0, z: 400, roll: 0, pitch: 0, yaw: 0 }
+const DEFAULT_HOME_POSE: PoseDeg = { x: 0, y: 0, z: 400, roll: 0, pitch: 0, yaw: 0 }
 
 export const HomeSetting: React.FC<HomeSettingProps> = ({
 	homePose,
@@ -26,7 +26,7 @@ export const HomeSetting: React.FC<HomeSettingProps> = ({
 
 	// 更新Home位置
 	const updateHomePose = useCallback(
-		(axis: keyof ViewPose, value: number) => {
+		(axis: keyof PoseDeg, value: number) => {
 			setHomePose((prev) => ({ ...prev, [axis]: value }))
 		},
 		[setHomePose],

@@ -1,12 +1,4 @@
-export interface RobotPose {
-	x: number // 毫米
-	y: number // 毫米
-	z: number // 毫米
-	roll: number // 度
-	pitch: number // 度
-	yaw: number // 度
-}
-
+import { PoseDeg } from "../../shared/robot-types"
 export interface RobotArmState {
 	// 连接状态
 	connected: boolean
@@ -15,7 +7,7 @@ export interface RobotArmState {
 	error: string | null
 
 	// 当前位置和姿态
-	currentPose: RobotPose
+	currentPose: PoseDeg
 
 	// 关节状态
 	jointPositions: number[]

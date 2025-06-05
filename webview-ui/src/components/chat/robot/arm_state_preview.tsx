@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { HomeSetting } from "./home_setting"
 import { AxisControl } from "./axis_control"
-import { ViewPose } from "./common_interface"
+import { PoseDeg } from "@roo/shared/robot-types"
 import { vscode } from "@src/utils/vscode"
 
 // 机械臂状态接口
@@ -16,7 +16,7 @@ interface ArmState {
 	error: string | null
 
 	// 当前位置和姿态
-	currentPose: ViewPose
+	currentPose: PoseDeg
 
 	// 关节状态
 	jointPositions: number[]
@@ -37,7 +37,7 @@ const STEP_SIZES = {
 }
 
 // 默认Home位置
-const DEFAULT_HOME_POSE: ViewPose = { x: 0, y: 0, z: 400, roll: 0, pitch: 0, yaw: 0 }
+const DEFAULT_HOME_POSE: PoseDeg = { x: 0, y: 0, z: 400, roll: 0, pitch: 0, yaw: 0 }
 
 export const CytoR6ArmStatePreview: React.FC = () => {
 	const { t } = useAppTranslation()
@@ -61,10 +61,10 @@ export const CytoR6ArmStatePreview: React.FC = () => {
 	})
 
 	// 目标位置
-	const [targetPose, setTargetPose] = useState<ViewPose>(DEFAULT_HOME_POSE)
+	const [targetPose, setTargetPose] = useState<PoseDeg>(DEFAULT_HOME_POSE)
 
 	// Home位置设置
-	const [homePose, setHomePose] = useState<ViewPose>(DEFAULT_HOME_POSE)
+	const [homePose, setHomePose] = useState<PoseDeg>(DEFAULT_HOME_POSE)
 	const [showHomeSettings, setShowHomeSettings] = useState(false)
 
 	// 步长设置
@@ -139,7 +139,7 @@ export const CytoR6ArmStatePreview: React.FC = () => {
 
 	// 更新目标位置
 	const updateTargetPose = useCallback(
-		(axis: keyof ViewPose, value: number) => {
+		(axis: keyof PoseDeg, value: number) => {
 			setTargetPose((prev) => {
 				const newPose = { ...prev, [axis]: value }
 				// 自动执行移动命令
@@ -154,7 +154,7 @@ export const CytoR6ArmStatePreview: React.FC = () => {
 
 	// 增减位置值
 	const adjustValue = useCallback(
-		(axis: keyof ViewPose, delta: number) => {
+		(axis: keyof PoseDeg, delta: number) => {
 			setTargetPose((prev) => {
 				const newPose = {
 					...prev,

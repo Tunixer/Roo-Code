@@ -74,6 +74,8 @@ export interface ExtensionMessage {
 		| "indexCleared"
 		| "codebaseIndexConfig"
 		| "r6arm_state_update"
+		| "robotStateUpdate"
+		| "robotError"
 	text?: string
 	action?:
 		| "chatButtonClicked"
@@ -116,6 +118,8 @@ export interface ExtensionMessage {
 	userInfo?: CloudUserInfo
 	organizationAllowList?: OrganizationAllowList
 	payload?: any
+	// Robot-related properties
+	data?: any
 }
 
 export type ExtensionState = Pick<

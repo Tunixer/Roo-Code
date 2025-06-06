@@ -65,6 +65,8 @@ import { webviewMessageHandler } from "./webviewMessageHandler"
 import { WebviewMessage } from "../../shared/WebviewMessage"
 import { EMBEDDING_MODEL_PROFILES } from "../../shared/embeddingModels"
 import { ProfileValidator } from "../../shared/ProfileValidator"
+import { RobotStateManager } from "../robot/RobotStateManager"
+import { RobotCommandMessage, RobotArmState } from "../robot/types"
 
 /**
  * https://github.com/microsoft/vscode-webview-ui-toolkit-samples/blob/main/default/weather-webview/src/providers/WeatherViewProvider.ts
@@ -101,6 +103,7 @@ export class ClineProvider
 		return this._workspaceTracker
 	}
 	protected mcpHub?: McpHub // Change from private to protected
+	private robotStateManager?: RobotStateManager
 
 	public isViewLaunched = false
 	public settingsImportedAt?: number
@@ -147,6 +150,19 @@ export class ClineProvider
 			.catch((error) => {
 				this.log(`Failed to initialize MCP Hub: ${error}`)
 			})
+
+		// Initialize Robot State Manager
+		this.initializeRobotStateManager()
+	}
+
+	private async initializeRobotStateManager(): Promise<void> {
+		try {
+			this.robotStateManager = new RobotStateManager(this)
+			await this.robotStateManager.initialize()
+			this.log("Robot state manager initialized successfully")
+		} catch (error) {
+			this.log(`Failed to initialize robot state manager: ${error}`)
+		}
 	}
 
 	// Adds a new Cline instance to clineStack, marking the start of a new task.
@@ -262,6 +278,8 @@ export class ClineProvider
 		this._workspaceTracker = undefined
 		await this.mcpHub?.unregisterClient()
 		this.mcpHub = undefined
+		await this.robotStateManager?.dispose()
+		this.robotStateManager = undefined
 		this.customModesManager?.dispose()
 		this.log("Disposed all disposables")
 		ClineProvider.activeInstances.delete(this)
@@ -1676,5 +1694,21 @@ export class ClineProvider
 			diffStrategy: task?.diffStrategy?.getName(),
 			isSubtask: task ? !!task.parentTask : undefined,
 		}
+	}
+
+	// Robot-related methods
+	public async handleRobotCommand(message: RobotCommandMessage): Promise<void> {
+		if (!this.robotStateManager) {
+			throw new Error("Robot state manager not initialized")
+		}
+		await this.robotStateManager.handleCommand(message)
+	}
+
+	public getRobotState(): RobotArmState | undefined {
+		return this.robotStateManager?.getCurrentState()
+	}
+
+	public isRobotConnected(): boolean {
+		return this.robotStateManager?.isConnected() ?? false
 	}
 }

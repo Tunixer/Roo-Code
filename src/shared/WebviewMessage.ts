@@ -147,6 +147,8 @@ export interface WebviewMessage {
 		| "indexingStatusUpdate"
 		| "indexCleared"
 		| "codebaseIndexConfig"
+		| "robotCommand"
+		| "requestRobotState"
 	text?: string
 	disabled?: boolean
 	askResponse?: ClineAskResponse
@@ -176,6 +178,9 @@ export interface WebviewMessage {
 	hasSystemPromptOverride?: boolean
 	terminalOperation?: "continue" | "abort"
 	historyPreviewCollapsed?: boolean
+	// Robot-related properties
+	command?: string
+	data?: any
 }
 
 export const checkoutDiffPayloadSchema = z.object({

@@ -26,6 +26,9 @@ import { buildDocLink } from "@src/utils/docLinks"
 import { useAppTranslation } from "@src/i18n/TranslationContext"
 import { useExtensionState } from "@src/context/ExtensionStateContext"
 import { useSelectedModel } from "@src/components/ui/hooks/useSelectedModel"
+
+// import HistoryPreview from "../history/HistoryPreview"
+import { CytoR6ArmJointPreview } from "./robot/arm_joint_preview"
 import RooHero from "@src/components/welcome/RooHero"
 import RooTips from "@src/components/welcome/RooTips"
 
@@ -1387,7 +1390,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 						<RooHero />
 						{telemetrySetting === "unset" && <TelemetryBanner />}
 						{/* Show the task history preview if expanded and tasks exist */}
-						{taskHistory.length > 0 && isExpanded && <HistoryPreview />}
+						{taskHistory.length > 0 && isExpanded && <CytoR6ArmJointPreview />}
 						<p className="text-vscode-editor-foreground leading-tight font-vscode-font-family text-center text-balance max-w-[380px] mx-auto">
 							<Trans
 								i18nKey="chat:about"

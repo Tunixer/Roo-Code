@@ -5,6 +5,7 @@
 .vscode/**
 coverage/**
 node_modules/**
+!node_modules/zeromq/**
 src/**
 scripts/**
 .gitignore

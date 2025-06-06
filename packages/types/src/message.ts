@@ -52,6 +52,7 @@ export const clineSays = [
 	"condense_context",
 	"condense_context_error",
 	"codebase_search_result",
+	"robot_arm_state",
 ] as const
 
 export const clineSaySchema = z.enum(clineSays)

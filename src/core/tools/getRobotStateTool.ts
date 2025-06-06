@@ -1,4 +1,4 @@
-import { Cline } from "../Cline"
+import { Task as Cline } from "../task/Task"
 import { PushToolResult, ToolUse, RemoveClosingTag, ToolDescription } from "../../shared/tools"
 import { formatResponse } from "../prompts/responses"
 import Anthropic from "@anthropic-ai/sdk"
@@ -168,7 +168,7 @@ export async function getRobotStateTool(
 	const forwarder = new RobotStateForwarder(cline)
 	await forwarder.run()
 	await cline.say("completion_result", result_text, undefined, false)
-	cline.emit("taskCompleted", cline.taskId, cline.getTokenUsage(), cline.getToolUsage())
+	cline.emit("taskCompleted", cline.taskId, cline.getTokenUsage(), cline.toolUsage)
 
 	const { response, text, images } = await cline.ask("completion_result", "", false)
 

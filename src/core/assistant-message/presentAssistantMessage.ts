@@ -31,6 +31,7 @@ import { formatResponse } from "../prompts/responses"
 import { validateToolUse } from "../tools/validateToolUse"
 import { Task } from "../task/Task"
 import { codebaseSearchTool } from "../tools/codebaseSearchTool"
+import { getRobotStateTool } from "../tools/getRobotStateTool"
 
 /**
  * Processes and presents assistant message content to the user interface.
@@ -192,6 +193,8 @@ export async function presentAssistantMessage(cline: Task) {
 						const modeName = getModeBySlug(mode, customModes)?.name ?? mode
 						return `[${block.name} in ${modeName} mode: '${message}']`
 					}
+					case "robot_arm_state":
+						return `[${block.name}]`
 				}
 			}
 
@@ -465,6 +468,9 @@ export async function presentAssistantMessage(cline: Task) {
 						toolDescription,
 						askFinishSubTaskApproval,
 					)
+					break
+				case "robot_arm_state":
+					await getRobotStateTool(cline, block, pushToolResult, removeClosingTag, toolDescription)
 					break
 			}
 

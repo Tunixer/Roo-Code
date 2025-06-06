@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { HomeSetting } from "./home_setting"
 import { AxisControl } from "./axis_control"
-import { PoseDeg } from "@roo/shared/robot-types"
+import { PoseDeg } from "@roo/robot-types"
 import { vscode } from "@src/utils/vscode"
 
 // 机械臂状态接口

@@ -245,29 +245,39 @@ export class BasicMoveReq implements IBasicMoveReq {
 		currentOffset += BasicMoveType.size
 		switch (data.move_type) {
 			case IBasicMoveType.kJointPosition:
-				const viewJointPosition = new DataView(ret, currentOffset)
-				JointPosition.writeToDataView(viewJointPosition, data.move_target as IJointPosition)
-				currentOffset += JointPosition.size
+				{
+					const viewJointPosition = new DataView(ret, currentOffset)
+					JointPosition.writeToDataView(viewJointPosition, data.move_target as IJointPosition)
+					currentOffset += JointPosition.size
+				}
 				break
 			case IBasicMoveType.kJointVelocity:
-				const viewJointVelocity = new DataView(ret, currentOffset)
-				JointVelocity.writeToDataView(viewJointVelocity, data.move_target as IJointVelocity)
-				currentOffset += JointVelocity.size
+				{
+					const viewJointVelocity = new DataView(ret, currentOffset)
+					JointVelocity.writeToDataView(viewJointVelocity, data.move_target as IJointVelocity)
+					currentOffset += JointVelocity.size
+				}
 				break
 			case IBasicMoveType.kJointTorques:
-				const viewJointTorques = new DataView(ret, currentOffset)
-				JointTorques.writeToDataView(viewJointTorques, data.move_target as IJointTorques)
-				currentOffset += JointTorques.size
+				{
+					const viewJointTorques = new DataView(ret, currentOffset)
+					JointTorques.writeToDataView(viewJointTorques, data.move_target as IJointTorques)
+					currentOffset += JointTorques.size
+				}
 				break
 			case IBasicMoveType.kCartesianPose:
-				const viewCartesianPose = new DataView(ret, currentOffset)
-				CartesianPose.writeToDataView(viewCartesianPose, data.move_target as ICartesianPose)
-				currentOffset += CartesianPose.size
+				{
+					const viewCartesianPose = new DataView(ret, currentOffset)
+					CartesianPose.writeToDataView(viewCartesianPose, data.move_target as ICartesianPose)
+					currentOffset += CartesianPose.size
+				}
 				break
 			case IBasicMoveType.kCartesianVelocity:
-				const viewCartesianVelocity = new DataView(ret, currentOffset)
-				CartesianVelocity.writeToDataView(viewCartesianVelocity, data.move_target as ICartesianVelocity)
-				currentOffset += CartesianVelocity.size
+				{
+					const viewCartesianVelocity = new DataView(ret, currentOffset)
+					CartesianVelocity.writeToDataView(viewCartesianVelocity, data.move_target as ICartesianVelocity)
+					currentOffset += CartesianVelocity.size
+				}
 				break
 			default:
 				throw new Error("Invalid move type")

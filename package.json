@@ -18,17 +18,10 @@
 		"bundle:nightly": "turbo bundle:nightly --log-order grouped --output-logs new-only",
 		"vsix": "turbo vsix --log-order grouped --output-logs new-only",
 		"vsix:nightly": "turbo vsix:nightly --log-order grouped --output-logs new-only",
+		"clean": "turbo clean --log-order grouped --output-logs new-only && rimraf dist out bin .vite-port .turbo",
 		"changeset:version": "cp CHANGELOG.md src/CHANGELOG.md && changeset version && cp -vf src/CHANGELOG.md .",
 		"knip": "knip --include files",
-		"clean": "npm-run-all -l -p clean:*",
-		"clean:extension": "rimraf bin dist out",
-		"clean:webview": "cd webview-ui && npm run clean",
-		"clean:e2e": "cd e2e && npm run clean",
-		"vscode-test": "npm-run-all -l -p vscode-test:*",
-		"vscode-test:extension": "tsc -p . --outDir out && node esbuild.js",
-		"vscode-test:webview": "cd webview-ui && npm run build",
-		"update-contributors": "node scripts/update-contributors.js",
-		"generate-types": "tsx scripts/generate-types.mts"
+		"update-contributors": "node scripts/update-contributors.js"
 	},
 	"dependencies": {
 		"@anthropic-ai/bedrock-sdk": "^0.10.2",

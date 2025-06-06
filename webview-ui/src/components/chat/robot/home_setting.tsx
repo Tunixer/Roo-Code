@@ -2,7 +2,7 @@ import React, { useState, useCallback } from "react"
 import { useAppTranslation } from "@/i18n/TranslationContext"
 import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
-import { PoseDeg } from "@roo/shared/robot-types"
+import { PoseDeg } from "@roo/robot-types"
 
 interface HomeSettingProps {
 	homePose: PoseDeg

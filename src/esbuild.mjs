@@ -63,6 +63,32 @@ async function main() {
 			},
 		},
 		{
+			name: "copyZeromq",
+			setup(build) {
+				build.onEnd(() => {
+					// Copy entire zeromq package to ensure all files are available
+					const zeromqSrc = path.join(srcDir, "..", "node_modules", "zeromq")
+					const zeromqDest = path.join(distDir, "node_modules", "zeromq")
+					
+					if (fs.existsSync(zeromqSrc)) {
+						// Ensure the parent directory exists
+						fs.mkdirSync(path.dirname(zeromqDest), { recursive: true })
+						
+						// Remove existing zeromq directory if it exists
+						if (fs.existsSync(zeromqDest)) {
+							fs.rmSync(zeromqDest, { recursive: true, force: true })
+						}
+						
+						// Copy the directory recursively
+						fs.cpSync(zeromqSrc, zeromqDest, { recursive: true, dereference: true })
+						console.log(`[copyZeromq] Copied entire zeromq package to ${zeromqDest}`)
+					} else {
+						console.warn(`[copyZeromq] ZeroMQ package not found: ${zeromqSrc}`)
+					}
+				})
+			},
+		},
+		{
 			name: "copyWasms",
 			setup(build) {
 				build.onEnd(() => copyWasms(srcDir, distDir))
@@ -98,7 +124,7 @@ async function main() {
 		plugins,
 		entryPoints: ["extension.ts"],
 		outfile: "dist/extension.js",
-		external: ["vscode"],
+		external: ["vscode", "zeromq"],
 	}
 
 	/**

@@ -50,16 +50,12 @@ export interface PoseDeg {
  * 速度信息
  */
 export interface Velocity {
-	linear: {
-		x: number
-		y: number
-		z: number
-	}
-	angular: {
-		roll: number
-		pitch: number
-		yaw: number
-	}
+	vx: number
+	vy: number
+	vz: number
+	wx: number
+	wy: number
+	wz: number
 }
 
 /**

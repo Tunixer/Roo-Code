@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react"
 import { useAppTranslation } from "@/i18n/TranslationContext"
-import { R6ArmState as _R6ArmState, JointData as _JointData, PoseDeg, Velocity } from "@roo/shared/robot-types"
+import { R6ArmState as _R6ArmState, JointData as _JointData, PoseDeg, Velocity } from "@roo/robot-types"
 import {
 	Chart as ChartJS,
 	CategoryScale,
@@ -28,8 +28,12 @@ export const CytoR6ArmState: React.FC = () => {
 	const [jointTorques, setJointTorques] = useState<number[]>([0, 0, 0, 0, 0, 0])
 	const [endEffectorPose, setEndEffectorPose] = useState<PoseDeg>({ x: 0, y: 0, z: 0, roll: 0, pitch: 0, yaw: 0 })
 	const [endEffectorVelocity, setEndEffectorVelocity] = useState<Velocity>({
-		linear: { x: 0, y: 0, z: 0 },
-		angular: { roll: 0, pitch: 0, yaw: 0 },
+		vx: 0,
+		vy: 0,
+		vz: 0,
+		wx: 0,
+		wy: 0,
+		wz: 0,
 	})
 
 	// 历史数据
@@ -133,9 +137,9 @@ export const CytoR6ArmState: React.FC = () => {
 
 		// 更新末端线速度历史
 		setVelocityLinearHistory((prev) => {
-			const newVx = [...prev.vx, endEffectorVelocity.linear.x]
-			const newVy = [...prev.vy, endEffectorVelocity.linear.y]
-			const newVz = [...prev.vz, endEffectorVelocity.linear.z]
+			const newVx = [...prev.vx, endEffectorVelocity.vx]
+			const newVy = [...prev.vy, endEffectorVelocity.vy]
+			const newVz = [...prev.vz, endEffectorVelocity.vz]
 			return {
 				vx: newVx.length > MAX_DATA_POINTS ? newVx.slice(-MAX_DATA_POINTS) : newVx,
 				vy: newVy.length > MAX_DATA_POINTS ? newVy.slice(-MAX_DATA_POINTS) : newVy,
@@ -145,9 +149,9 @@ export const CytoR6ArmState: React.FC = () => {
 
 		// 更新末端角速度历史
 		setVelocityAngularHistory((prev) => {
-			const newWx = [...prev.wx, endEffectorVelocity.angular.roll]
-			const newWy = [...prev.wy, endEffectorVelocity.angular.pitch]
-			const newWz = [...prev.wz, endEffectorVelocity.angular.yaw]
+			const newWx = [...prev.wx, endEffectorVelocity.wx]
+			const newWy = [...prev.wy, endEffectorVelocity.wy]
+			const newWz = [...prev.wz, endEffectorVelocity.wz]
 			return {
 				wx: newWx.length > MAX_DATA_POINTS ? newWx.slice(-MAX_DATA_POINTS) : newWx,
 				wy: newWy.length > MAX_DATA_POINTS ? newWy.slice(-MAX_DATA_POINTS) : newWy,

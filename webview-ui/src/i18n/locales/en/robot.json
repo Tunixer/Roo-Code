@@ -5,6 +5,9 @@
 		"jointPosition": "Joint {{number}} Position",
 		"jointVelocity": "Joint {{number}} Velocity",
 		"jointTorque": "Joint {{number}} Torque",
+		"jointPositions": "Joint Positions",
+		"jointVelocities": "Joint Velocities",
+		"jointTorques": "Joint Torques",
 		"endEffectorState": "End Effector State",
 		"posePosition": "Pose (Position)",
 		"poseOrientation": "Pose (Orientation)",
@@ -13,6 +16,7 @@
 	},
 	"armController": {
 		"title": "Robot Arm Controller",
+		"jointControl": "Joint Control",
 		"connection": {
 			"title": "Connection Settings",
 			"ipAddress": "IP Address",
@@ -62,6 +66,8 @@
 		"medium": "Medium",
 		"large": "Large",
 		"syncCurrentPose": "Sync Current Pose",
+		"syncCurrentJoints": "Sync Current Joints",
+		"executeMove": "Execute Move",
 		"homeSettings": "Home Position Settings",
 		"setHomePosition": "Set Home Position",
 		"goToHome": "Go to Home",

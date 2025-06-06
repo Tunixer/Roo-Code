@@ -119,8 +119,8 @@ function convertToRobotArmState(data: RobotStateData): RobotArmState {
 		},
 
 		// 关节状态 - 映射字段名
-		jointPositions: data.joint_position,
-		jointVelocities: data.joint_velocity,
+		jointPositions: data.joint_position.map((pos) => (pos * 180) / Math.PI),
+		jointVelocities: data.joint_velocity.map((vel) => (vel * 180) / Math.PI),
 		jointTorques: data.joint_torques,
 	}
 }

@@ -360,6 +360,8 @@ export class ArmStateSubscriber extends EventEmitter<ArmStateSubscriberEvents> {
 					return await this.handleHome(data)
 				case "move_to_target":
 					return await this.handleMoveToTarget(data)
+				case "move_joints":
+					return await this.handleMoveJoints(data)
 				case "stop":
 					return await this.handleStop()
 				case "emergency_stop":
@@ -449,6 +451,31 @@ export class ArmStateSubscriber extends EventEmitter<ArmStateSubscriberEvents> {
 		// TODO: 发送回原点命令到实际的机械臂
 
 		return formatResponse.toolResult(`Moving to home position: ${JSON.stringify(homePose)}`, [])
+	}
+
+	private async handleMoveJoints(jointPositions: number[]): Promise<ToolResponse> {
+		if (!this.isConnected) {
+			return formatResponse.toolError("Robot arm is not connected")
+		}
+
+		console.log("[ArmStateSubscriber] Moving to joint positions:", jointPositions)
+
+		// TODO: 发送移动命令到实际的机械臂
+		let move_req = new BasicMoveReq({
+			request_type: IRequestType.kNonCallback,
+			command_id: new CommandId(this.command_id_counter++),
+			command_type: ICommandType.kBasicMove,
+			move_type: IBasicMoveType.kJointPosition,
+			move_target: {
+				joint_positions: jointPositions.map((pos) => (pos * Math.PI) / 180),
+			},
+		})
+
+		const send_arr = BasicMoveReq.toArrayBuffer(move_req)
+
+		this.zmq_dealer.send(send_arr)
+
+		return formatResponse.toolResult(`Moving to joint positions: ${JSON.stringify(jointPositions)}`, [])
 	}
 
 	private async handleMoveToTarget(targetPose: PoseDeg): Promise<ToolResponse> {

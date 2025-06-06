@@ -24,7 +24,7 @@ class BasicMoveType {
 }
 
 export interface IJointPosition {
-	joint_positions: number[]
+	joint_positions: number[] // 单位：弧度
 }
 
 export class JointPosition implements IJointPosition {
@@ -39,7 +39,7 @@ export class JointPosition implements IJointPosition {
 		const double_size = 8
 		const joint_positions = []
 		for (let i = 0; i < 6; i++) {
-			joint_positions.push(data.getFloat64(4 + i * double_size, isLittleEndian))
+			joint_positions.push(data.getFloat64(i * double_size, isLittleEndian))
 		}
 		return { joint_positions }
 	}
@@ -48,7 +48,7 @@ export class JointPosition implements IJointPosition {
 		const isLittleEndian = true
 		const double_size = 8
 		for (let i = 0; i < 6; i++) {
-			dataView.setFloat64(4 + i * double_size, data.joint_positions[i], isLittleEndian)
+			dataView.setFloat64(i * double_size, data.joint_positions[i], isLittleEndian)
 		}
 	}
 }
@@ -70,7 +70,7 @@ export class JointVelocity implements IJointVelocity {
 		const double_size = 8
 		const joint_velocities = []
 		for (let i = 0; i < 6; i++) {
-			joint_velocities.push(data.getFloat64(4 + i * double_size, isLittleEndian))
+			joint_velocities.push(data.getFloat64(i * double_size, isLittleEndian))
 		}
 		return { joint_velocities }
 	}
@@ -79,7 +79,7 @@ export class JointVelocity implements IJointVelocity {
 		const isLittleEndian = true
 		const double_size = 8
 		for (let i = 0; i < 6; i++) {
-			dataView.setFloat64(4 + i * double_size, data.joint_velocities[i], isLittleEndian)
+			dataView.setFloat64(i * double_size, data.joint_velocities[i], isLittleEndian)
 		}
 	}
 }
@@ -101,7 +101,7 @@ export class JointTorques implements IJointTorques {
 		const double_size = 8
 		const torques = []
 		for (let i = 0; i < 6; i++) {
-			torques.push(data.getFloat64(4 + i * double_size, isLittleEndian))
+			torques.push(data.getFloat64(i * double_size, isLittleEndian))
 		}
 		return { torques }
 	}
@@ -110,7 +110,7 @@ export class JointTorques implements IJointTorques {
 		const isLittleEndian = true
 		const double_size = 8
 		for (let i = 0; i < 6; i++) {
-			dataView.setFloat64(4 + i * double_size, data.torques[i], isLittleEndian)
+			dataView.setFloat64(i * double_size, data.torques[i], isLittleEndian)
 		}
 	}
 }

@@ -10,9 +10,9 @@ export interface RobotArmState {
 	currentPose: PoseDeg
 
 	// 关节状态
-	jointPositions: number[]
-	jointVelocities: number[]
-	jointTorques: number[]
+	jointPositions: number[] // 单位：度
+	jointVelocities: number[] // 单位：度/秒
+	jointTorques: number[] // 单位：N·m
 }
 
 export interface RobotCommand {
